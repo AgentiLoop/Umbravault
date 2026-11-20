@@ -75,6 +75,15 @@ export const MONSTERS = {
   boss: { name: 'The Hollow King', icon: '☠️', hp: 600, dmg: [18, 30], xp: 400, speed: 700, atkCd: 1500, undead: true, range: 3, boss: true, tier: 9 },
 };
 
+// Elite monsters: tougher variants with one affix, more XP and a guaranteed Runed+ gear drop.
+export const AFFIXES = {
+  swift: { name: 'Swift', icon: '💨', color: '#7fe0ff', desc: 'moves and attacks faster' },
+  vampiric: { name: 'Vampiric', icon: '🩸', color: '#ff3355', desc: 'heals from the damage it deals' },
+  stoneskin: { name: 'Stoneskin', icon: '🪨', color: '#c8b89a', desc: 'takes 35% less damage' },
+  frenzied: { name: 'Frenzied', icon: '💢', color: '#ff8a2a', desc: 'hits 40% harder' },
+  molten: { name: 'Molten', icon: '🌋', color: '#ff5a00', desc: 'explodes when slain' },
+};
+export const eliteName = (m, def) => (m.e ? `${AFFIXES[m.e].name} ${def.name}` : def.name);
 export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
 
 export function mulberry32(seed) {

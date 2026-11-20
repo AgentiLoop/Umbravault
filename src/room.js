@@ -1,6 +1,6 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
 import { validHeroKey } from './hero.js';
-import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, rollGear, gearScore, RARITY } from '../public/js/data.js';
+import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
@@ -69,8 +69,10 @@ export class GameRoom {
 
   spawnMonster(type, x, y, hpScale) {
     const def = MONSTERS[type];
-    const hp = Math.round(def.hp * hpScale);
-    this.monsters.push({ id: this.nextId++, type, x, y, hp, mhp: hp, f: 2, stun: 0, nextMove: 0, nextAtk: 0, aggro: false });
+    const keys = Object.keys(AFFIXES);
+    const e = !def.boss && Math.random() < Math.min(0.25, 0.06 + this.depth * 0.025) ? keys[rint(0, keys.length - 1)] : 0;
+    const hp = Math.round(def.hp * hpScale * (e ? 2.2 : 1));
+    this.monsters.push({ id: this.nextId++, type, e, x, y, hp, mhp: hp, f: 2, stun: 0, nextMove: 0, nextAtk: 0, aggro: false });
   }
 
   placeAtStart(p, full) {
@@ -393,6 +395,7 @@ export class GameRoom {
       if (ab.holy && def.undead) dmg *= ab.holy;
       const crit = (ab.crit && wasVeiled) || Math.random() < (ab.crit || 0.1);
       if (crit) dmg *= 1.75;
+      if (mo.e === 'stoneskin') dmg *= 0.65;
       dmg = Math.round(dmg);
       mo.hp -= dmg;
       mo.aggro = true;
@@ -416,8 +419,20 @@ export class GameRoom {
     this.monsters = this.monsters.filter((m) => m !== mo);
     killer.kills++;
     this.fx({ k: 'death', x: mo.x, y: mo.y, mid: mo.id });
-    this.log(`${killer.name} slays the ${def.name}!`, def.boss ? 'boss' : 'kill');
-    const xp = Math.round(def.xp * (1 + 0.1 * (this.depth - 1)));
+    this.log(`${killer.name} slays the ${eliteName(mo, def)}!`, def.boss || mo.e ? 'boss' : 'kill');
+    const xp = Math.round(def.xp * (mo.e ? 3 : 1) * (1 + 0.1 * (this.depth - 1)));
+    if (mo.e === 'molten') {
+      const now = Date.now();
+      this.fx({ k: 'fire', x: mo.x, y: mo.y, tx: mo.x, ty: mo.y });
+      for (const p of this.players.values()) if (!p.dead && !p.goneAt && cheb(p, mo) <= 1) {
+        const dmg = Math.max(1, 18 + this.depth * 5 - p.armor);
+        p.hp -= dmg;
+        this.fx({ k: 'num', x: p.x, y: p.y, v: dmg, pid: p.id });
+        if (p.hp <= 0) this.killPlayer(p, 'a molten blast', now);
+      }
+      this.log(`The ${eliteName(mo, def)} erupts in flame!`, 'death');
+    }
+    if (mo.e) this.dropGear(mo.x, mo.y, 1);
     for (const p of this.players.values()) this.gainXp(p, xp);
     const r = Math.random();
     if (def.boss) {
@@ -509,18 +524,19 @@ export class GameRoom {
       const adjacent = nd === 1;
       const inRange = def.range && (mo.x === nearest.x || mo.y === nearest.y) && nd <= def.range && this.lineClear(mo, nearest);
       if ((adjacent || inRange) && now >= mo.nextAtk) {
-        mo.nextAtk = now + def.atkCd;
+        mo.nextAtk = now + def.atkCd * (mo.e === 'swift' ? 0.7 : 1);
         mo.f = DIRS.findIndex(([dx, dy]) => dx === Math.sign(nearest.x - mo.x) && dy === Math.sign(nearest.y - mo.y));
-        const dmg = Math.max(1, Math.round(rint(...def.dmg) * (1 + 0.1 * (this.depth - 1))) - nearest.armor);
+        const dmg = Math.max(1, Math.round(rint(...def.dmg) * (mo.e === 'frenzied' ? 1.4 : 1) * (1 + 0.1 * (this.depth - 1))) - nearest.armor);
         nearest.hp -= dmg;
+        if (mo.e === 'vampiric') mo.hp = Math.min(mo.mhp, mo.hp + Math.round(dmg * 0.5));
         if (nearest.rev) { nearest.rev = null; this.send(nearest.ws, { t: 'toast', text: 'Revive interrupted!' }); }
         this.fx({ k: adjacent ? 'claw' : 'mbolt', x: mo.x, y: mo.y, tx: nearest.x, ty: nearest.y, mid: mo.id });
         this.fx({ k: 'num', x: nearest.x, y: nearest.y, v: dmg, pid: nearest.id });
-        if (nearest.hp <= 0) this.killPlayer(nearest, `a ${def.name}`, now);
+        if (nearest.hp <= 0) this.killPlayer(nearest, `a ${eliteName(mo, def)}`, now);
         continue;
       }
       if (adjacent || now < mo.nextMove) continue;
-      mo.nextMove = now + def.speed;
+      mo.nextMove = now + def.speed * (mo.e === 'swift' ? 0.55 : 1);
       const here = dist[mo.y * w + mo.x];
       let best = null, bestD = here === -1 ? 1e9 : here;
       for (let d = 0; d < 4; d++) {
@@ -543,7 +559,7 @@ export class GameRoom {
         mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
         rv: p.rev ? Math.min(1, (now - p.rev.start) / (p.rev.end - p.rev.start)) : 0, rt: p.rev ? p.rev.tid : 0,
       })),
-      m: this.monsters.map((m) => ({ id: m.id, t: m.type, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
+      m: this.monsters.map((m) => ({ id: m.id, t: m.type, e: m.e, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
       i: this.items.map((i) => ({ id: i.id, x: i.x, y: i.y, k: i.k, ...(i.g ? { r: i.g.rarity, s: i.g.slot } : {}) })),
       ev: this.events,
     };

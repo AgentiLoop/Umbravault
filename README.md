@@ -28,6 +28,11 @@ Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Ni
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
 Every third depth holds a boss, **The Hollow King**.
 
+### Elite monsters
+Some monsters spawn as **elites**: about 9% on depth 1, rising to about 22% by depth 8. An elite has 2.2× HP and one affix, shown by a colored glow, a ring and a name label:
+💨 Swift (moves and attacks faster), 🩸 Vampiric (heals from its hits), 🪨 Stoneskin (takes 35% less damage), 💢 Frenzied (hits 40% harder) and 🌋 Molten (explodes when slain, so step back).
+Elites give 3× XP and always drop Runed-or-better gear.
+
 ### Doors & traps
 Iron-bound doors guard many room entrances. Walk into a door to raise it, and it stays open for the whole party. Monsters can't open doors or see through closed ones.
 Hidden spike traps lie in rooms and corridors. Stepping on one costs about 15% of max HP and leaves spikes showing. **Nightblades** sense armed traps within 2 paces and disarm them automatically.

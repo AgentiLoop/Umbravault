@@ -1,6 +1,6 @@
 // Three.js renderer for Umbravault: grid dungeon, lantern lighting, billboard sprites, spell effects.
 import * as THREE from 'three';
-import { CLASSES, MONSTERS, RARITY, SLOTS } from './data.js';
+import { CLASSES, MONSTERS, RARITY, SLOTS, AFFIXES } from './data.js';
 
 const WALL_H = 1.15;
 const EYE = 0.52;
@@ -280,20 +280,27 @@ export class Renderer {
       const def = MONSTERS[m.t];
       if (!o) {
         o = new THREE.Group();
-        const scale = def.boss ? 1.2 : 0.72;
-        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(def.icon, def.boss ? '#ff2244' : '#aa2200'), transparent: true }));
+        const aff = m.e ? AFFIXES[m.e] : null;
+        const scale = def.boss ? 1.2 : aff ? 0.88 : 0.72;
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(def.icon, def.boss ? '#ff2244' : aff ? aff.color : '#aa2200'), transparent: true }));
         spr.scale.set(scale, scale, 1); spr.position.y = def.boss ? 0.6 : 0.38;
         const bar = hpBar(); bar.position.y = def.boss ? 1.25 : 0.82;
         const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.25, 16), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.45, depthWrite: false }));
         shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.01;
         o.add(spr, bar, shadow);
+        if (aff) {
+          const label = textSprite(`${aff.icon} ${aff.name}`, aff.color, 36, 0.5); label.position.y = 1.0; o.add(label);
+          const glow = new THREE.PointLight(new THREE.Color(aff.color), 1.6, 2.5, 1.5); glow.position.y = 0.4; o.add(glow);
+          const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.33, 32), new THREE.MeshBasicMaterial({ color: aff.color, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+          ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; o.add(ring);
+        }
         o.userData = { spr, bar, lastHp: -1, flash: 0, x: m.x, y: m.y, baseY: spr.position.y, boss: def.boss };
         o.position.set(m.x, 0, m.y);
         this.entities.add(o); this.monsterObjs.set(m.id, o);
       }
       const u = o.userData;
       u.x = m.x; u.y = m.y; u.stun = m.s;
-      if (u.lastHp !== m.hp) { if (u.lastHp > m.hp) u.flash = 1; u.lastHp = m.hp; u.bar.userData.set(m.hp / m.mhp, def.boss ? '#ff2a6a' : '#e33'); }
+      if (u.lastHp !== m.hp) { if (u.lastHp > m.hp) u.flash = 1; u.lastHp = m.hp; u.bar.userData.set(m.hp / m.mhp, def.boss ? '#ff2a6a' : m.e ? AFFIXES[m.e].color : '#e33'); }
     }
     for (const [id, o] of this.monsterObjs) if (!seen.has(id)) { this.entities.remove(o); this.monsterObjs.delete(id); }
   }

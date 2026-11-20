@@ -1,5 +1,5 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
-import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc } from './data.js';
+import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName } from './data.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 
@@ -338,7 +338,7 @@ function updateHud(depth) {
   }
   const tf = $('#target');
   tf.classList.toggle('hidden', !tgt);
-  if (tgt) { const d = MONSTERS[tgt.t]; tf.innerHTML = `${d.icon} ${d.name}${tgt.s ? ' ❄️' : ''}<div class="mini"><div style="width:${(100 * tgt.hp) / tgt.mhp}%"></div></div>`; }
+  if (tgt) { const d = MONSTERS[tgt.t]; const af = tgt.e ? AFFIXES[tgt.e] : null; tf.innerHTML = `${d.icon} <span style="color:${af ? af.color : 'inherit'}">${eliteName(tgt, d)}</span>${tgt.s ? ' ❄️' : ''}${af ? `<div style="font-size:11px;opacity:.8">${af.icon} Elite — ${af.desc}</div>` : ''}<div class="mini"><div style="width:${(100 * tgt.hp) / tgt.mhp}%"></div></div>`; }
   if (S.map.cells[S.me.y]?.[S.me.x] === '>' && !S.onStairsHint) { toast('Press <b>G</b> to vote to descend'); S.onStairsHint = true; }
   if (S.map.cells[S.me.y]?.[S.me.x] !== '>') S.onStairsHint = false;
 }
