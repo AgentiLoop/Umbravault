@@ -490,11 +490,12 @@ export class GameRoom {
     mo.nextPower = now + def.powerCd;
     this.log(`${def.name} ${def.title}!`, 'boss');
     if (def.power === 'nova') { mo.novaAt = now + 1500; this.fx({ k: 'warn', x: mo.x, y: mo.y, r: 2 }); return; }
-    const kind = def.power === 'raise' ? 'skeleton' : 'spider';
+    const kinds = def.power === 'raise' ? ['skeleton'] : def.power === 'rally' ? ['bandit', 'archer', 'knight'] : ['spider'];
     const alive = this.monsters.filter((m) => m.summon).length;
     let made = 0;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
-      if (made >= (def.power === 'raise' ? 2 : 3) || alive + made >= 6) break;
+      if (made >= (def.power === 'brood' ? 3 : 2) || alive + made >= 6) break;
+      const kind = kinds[(alive + made) % kinds.length];
       const x = mo.x + dx, y = mo.y + dy;
       if (!isWalkable(this.grid[y]?.[x]) || this.monsterAt(x, y) || [...this.players.values()].some((p) => p.x === x && p.y === y)) continue;
       this.spawnMonster(kind, x, y, (this.hpScale || 1) * 0.7);

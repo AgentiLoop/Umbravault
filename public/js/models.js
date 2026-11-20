@@ -303,6 +303,7 @@ const BUILDERS = {
   ogre: () => humanoid({ skin: 0x8a8a6a, cloth: 0x5a4024, pants: 0x4a3420, belly: true, tusks: true, eyes: 0xffaa22, weapon: 'club', bulk: 1.5, scale: 1.4, hunch: true }),
   boss: () => humanoid({ skull: true, crown: true, eyes: 0x6af0ff, weapon: 'greatsword', steel: 0x8ab8d8, cape: 0x3a0a4a, cloth: 0x2a0a3a, scale: 1.65 }),
   matriarch: () => spider({ scale: 2.6, shell: 0x2a1a10, mark: 0xff5a1a, eyes: 0xffaa22, tail: true }),
+  warlord: () => humanoid({ skin: 0xc08a64, armor: 0x8a7a5a, helm: 0x8a7a5a, crown: true, plume: 0xd8b020, weapon: 'greataxe', steel: 0xc8ccd8, shield: 0x2a3a6a, cape: 0x1a2a6a, eyes: 0x111111, bulk: 1.2, scale: 1.6 }),
   tyrant: () => humanoid({ skin: 0x8a1e12, cloth: 0x2a0a06, pants: 0x1a0804, horns: true, hornColor: 0x1a1210, eyes: 0xffd21a, weapon: 'greataxe', steel: 0x3a3030, wings: 0x5a120a, bulk: 1.3, scale: 1.7, tusks: true }),
 };
 

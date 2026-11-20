@@ -90,6 +90,7 @@ export const MONSTERS = {
   ogre: { name: 'Cavern Ogre', icon: '👹', hp: 130, dmg: [15, 24], xp: 60, speed: 950, atkCd: 1700, tier: 3 },
   boss: { name: 'The Hollow King', icon: '☠️', hp: 600, dmg: [18, 30], xp: 400, speed: 700, atkCd: 1500, undead: true, range: 3, boss: true, tier: 9, power: 'raise', powerCd: 9000, title: 'raises the dead' },
   matriarch: { name: 'The Brood Matriarch', icon: '🦂', hp: 720, dmg: [20, 32], xp: 520, speed: 600, atkCd: 1300, boss: true, tier: 9, power: 'brood', powerCd: 8000, title: 'births a swarm' },
+  warlord: { name: 'Varkas the Iron Warlord', icon: '👑', hp: 1000, dmg: [24, 36], xp: 800, speed: 750, atkCd: 1400, boss: true, human: true, tier: 9, power: 'rally', powerCd: 8500, title: 'sounds the war horn' },
   tyrant: { name: 'The Ember Tyrant', icon: '🐉', hp: 900, dmg: [22, 34], xp: 700, speed: 800, atkCd: 1600, range: 4, boss: true, tier: 9, power: 'nova', powerCd: 6500, title: 'gathers a firestorm' },
 };
 
@@ -111,7 +112,7 @@ export const SHOP = [
 ];
 export const MERCHANT_RANGE = 2;
 // bosses guard every 3rd depth, in this rotation
-export const BOSS_ORDER = ['boss', 'matriarch', 'tyrant'];
+export const BOSS_ORDER = ['boss', 'matriarch', 'tyrant', 'warlord'];
 export const bossForDepth = (d) => BOSS_ORDER[(Math.floor(d / 3) - 1) % BOSS_ORDER.length];
 
 // quick emotes (keys 5-9): shown as a bubble over the hero and pinged on the minimap
