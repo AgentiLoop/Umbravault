@@ -1,5 +1,5 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
-import { CLASSES, MONSTERS, DIRS, isWalkable } from './data.js';
+import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc } from './data.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 
@@ -259,8 +259,9 @@ function toast(html, ms = 1800) {
 function buildAbilities() {
   const c = CLASSES[S.self.c];
   $('#abilities').innerHTML = c.abilities.map((a, i) => `<div class="ab" data-i="${i}" title="${a.name} — ${a.desc}"><span class="key">${i === 0 ? '␣' : i}</span>${a.icon}<span class="mp">${a.mp || ''}</span><div class="cd"></div></div>`).join('') +
+    `<div class="gear-sep"></div>` + Object.values(SLOTS).map((sl, i) => `<div class="ab gear" data-g="${i}"><span class="key">${sl.label}</span><span class="gi">${sl.icon}</span></div>`).join('') +
     `<div class="ab" data-potion="1" title="Crimson Draught — restore 50% HP"><span class="key">H</span>🧪<span class="mp" id="po"></span></div>`;
-  document.querySelectorAll('#abilities .ab').forEach((el) => el.onclick = () => el.dataset.potion ? send({ t: 'potion' }) : send({ t: 'act', i: +el.dataset.i }));
+  document.querySelectorAll('#abilities .ab:not(.gear)').forEach((el) => el.onclick = () => el.dataset.potion ? send({ t: 'potion' }) : send({ t: 'act', i: +el.dataset.i }));
   S.abBuilt = S.self.c;
 }
 
@@ -281,7 +282,18 @@ function updateHud(depth) {
     el.classList.toggle('nomp', me.mp < a.mp);
   });
   const po = $('#po'); if (po) po.textContent = me.po;
-  $('#stats').innerHTML = `<b style="color:${c.color}">${c.icon} Lv ${me.l}</b><br>💰 ${me.g}<br>☠️ ${me.k} kills`;
+  const gearKey = JSON.stringify(me.ge);
+  if (S.gearKey !== gearKey) {
+    S.gearKey = gearKey;
+    document.querySelectorAll('#abilities .ab.gear').forEach((el) => {
+      const g = me.ge[+el.dataset.g], sl = Object.values(SLOTS)[+el.dataset.g];
+      el.style.borderColor = g ? RARITY[g.rarity].color : '';
+      el.style.boxShadow = g ? `0 0 ${6 + g.rarity * 5}px ${RARITY[g.rarity].color}` : '';
+      el.querySelector('.gi').style.opacity = g ? 1 : 0.25;
+      el.title = g ? `${RARITY[g.rarity].name} ${g.name}\n${gearDesc(g)}` : `${sl.label}: empty — monsters and chests drop gear`;
+    });
+  }
+  $('#stats').innerHTML = `<b style="color:${c.color}">${c.icon} Lv ${me.l}</b><br>💰 ${me.g} · 🛡️ ${me.ar}<br>☠️ ${me.k} kills`;
   $('#party').innerHTML = S.players.map((p) => {
     const pc = CLASSES[p.c];
     const buffs = (p.o ? '📡' : '') + (p.mi ? '📯' : '') + (p.ve ? '🌑' : '') + (p.v ? '⬇️' : '');
@@ -323,7 +335,7 @@ function drawMinimap() {
     ctx.fillStyle = c === '#' ? '#3a3040' : c === 'P' ? '#5a4a60' : c === '>' ? '#55ccff' : '#1d1822';
     ctx.fillRect(x * sz, y * sz, sz, sz);
   }
-  for (const it of S.items) if (S.explored[it.y * w + it.x]) { ctx.fillStyle = it.k === 'gold' ? '#ffcc33' : '#ff3355'; ctx.fillRect(it.x * sz + 2, it.y * sz + 2, sz - 4, sz - 4); }
+  for (const it of S.items) if (S.explored[it.y * w + it.x]) { ctx.fillStyle = it.k === 'gold' ? '#ffcc33' : it.k === 'gear' ? RARITY[it.r].color : '#ff3355'; ctx.fillRect(it.x * sz + 2, it.y * sz + 2, sz - 4, sz - 4); }
   for (const mo of S.monsters) if (Math.abs(mo.x - S.me.x) <= 5 && Math.abs(mo.y - S.me.y) <= 5) { ctx.fillStyle = MONSTERS[mo.t].boss ? '#ff2a6a' : '#e33'; ctx.beginPath(); ctx.arc(mo.x * sz + sz / 2, mo.y * sz + sz / 2, sz / 2.4, 0, 7); ctx.fill(); }
   for (const p of S.players) {
     if (p.id === S.id) continue;

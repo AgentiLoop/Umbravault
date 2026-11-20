@@ -95,6 +95,7 @@ export class Sound {
       case 'might': this.tone(220, 0.6, 'sawtooth', 0.12 * v, 440); this.tone(330, 0.6, 'sawtooth', 0.08 * v, 660); break;
       case 'veil': this.tone(400, 0.6, 'sine', 0.12 * v, 90); this.noise(0.6, 0.08 * v, 'lowpass', 800, 100); break;
       case 'levelup': [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.35, 'square', 0.07, null, i * 0.08)); break;
+      case 'equip': [392, 523, 659, 784].slice(0, 2 + ev.r).forEach((f, i) => this.tone(f * (1 + ev.r * 0.25), 0.3, 'triangle', 0.1, null, i * 0.07)); break;
       case 'pickup': this.tone(1400, 0.08, 'square', 0.06); this.tone(2100, 0.15, 'square', 0.05, null, 0.06); break;
       case 'dmg': this.noise(0.1, ev.crit ? 0.4 : 0.25, 'lowpass', ev.crit ? 2500 : 1400); if (ev.crit) this.tone(180, 0.15, 'square', 0.12, 90); break;
       case 'death': this.tone(300, 0.5, 'sawtooth', 0.12 * v, 60); this.noise(0.4, 0.2 * v, 'lowpass', 900, 100); break;

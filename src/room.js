@@ -1,5 +1,5 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
-import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable } from '../public/js/data.js';
+import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
@@ -46,6 +46,7 @@ export class GameRoom {
         if (spot) this.spawnMonster(type, spot.x, spot.y, hpScale);
       }
       if (Math.random() < 0.35) { const s = this.freeCellIn(room); if (s) this.items.push({ id: this.nextId++, x: s.x, y: s.y, k: Math.random() < 0.5 ? 'potion' : 'gold', a: rint(10, 25) * depth }); }
+      if (Math.random() < 0.2) { const s = this.freeCellIn(room); if (s) this.dropGear(s.x, s.y, 0); }
     }
     if (depth % 3 === 0) {
       const r = this.map.endRoom;
@@ -138,7 +139,7 @@ export class GameRoom {
     const p = {
       id: this.nextId++, ws, token, goneAt: 0, name, cls, x: 0, y: 0, f: 1,
       hp: def.hp, mhp: def.hp, mp: def.mp, mmp: def.mp, armor: def.armor,
-      lvl: 1, xp: 0, gold: 0, potions: 2, kills: 0,
+      lvl: 1, xp: 0, gold: 0, potions: 2, kills: 0, gear: { weapon: null, armor: null, charm: null },
       cds: [0, 0, 0], might: 0, veil: 0, dead: false, respawnAt: 0, lastMove: 0, lastPotion: 0, vote: false,
     };
     this.players.set(p.id, p);
@@ -195,9 +196,33 @@ export class GameRoom {
     }
   }
 
+  dropGear(x, y, minRarity) {
+    const g = rollGear(this.depth, Math.random, minRarity);
+    this.items.push({ id: this.nextId++, x, y, k: 'gear', g });
+  }
+  // auto-equip upgrades; anything weaker is salvaged into gold
+  takeGear(p, g) {
+    const cur = p.gear[g.slot];
+    const r = RARITY[g.rarity].name;
+    if (gearScore(g) > gearScore(cur)) {
+      if (cur) { p.mhp -= cur.hp; p.mmp -= cur.mp; p.armor -= cur.arm; }
+      p.mhp += g.hp; p.mmp += g.mp; p.armor += g.arm;
+      p.hp = Math.min(p.mhp, p.hp + g.hp); p.mp = Math.min(p.mmp, p.mp + g.mp);
+      p.gear[g.slot] = g;
+      const salvage = cur ? Math.round(gearScore(cur) * 2) : 0;
+      p.gold += salvage;
+      this.log(`${p.name} equips the ${r} ${g.name}!${salvage ? ` (old gear salvaged for ${salvage} gold)` : ''}`, `r${g.rarity}`);
+      this.fx({ k: 'equip', x: p.x, y: p.y, pid: p.id, r: g.rarity });
+    } else {
+      const gold = Math.max(1, Math.round(gearScore(g) * 2));
+      p.gold += gold;
+      this.log(`${p.name} salvages a ${r} ${g.name} for ${gold} gold.`, 'loot');
+    }
+  }
   pickup(p) {
     for (const it of this.items.filter((i) => i.x === p.x && i.y === p.y)) {
       if (it.k === 'gold') { p.gold += it.a; this.log(`${p.name} pockets ${it.a} gold.`, 'loot'); }
+      else if (it.k === 'gear') this.takeGear(p, it.g);
       else { p.potions++; this.log(`${p.name} finds a Crimson Draught.`, 'loot'); }
       this.fx({ k: 'pickup', x: it.x, y: it.y });
       this.items = this.items.filter((i) => i !== it);
@@ -261,7 +286,7 @@ export class GameRoom {
     const wasVeiled = p.veil > now;
     for (const mo of hit) {
       const def = MONSTERS[mo.type];
-      let dmg = rint(...ab.dmg) * (1 + 0.12 * (p.lvl - 1));
+      let dmg = rint(...ab.dmg) * (1 + 0.12 * (p.lvl - 1)) * (1 + this.gearPow(p) / 100);
       if (p.might > now) dmg *= 1.4;
       if (ab.holy && def.undead) dmg *= ab.holy;
       const crit = (ab.crit && wasVeiled) || Math.random() < (ab.crit || 0.1);
@@ -275,6 +300,8 @@ export class GameRoom {
     }
     if (hit.length) p.veil = 0;
   }
+
+  gearPow(p) { return Object.values(p.gear).reduce((s, g) => s + (g ? g.pow : 0), 0); }
 
   healPlayer(p, amt) {
     const before = p.hp;
@@ -293,9 +320,11 @@ export class GameRoom {
     const r = Math.random();
     if (def.boss) {
       this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'gold', a: 300 * this.depth });
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]]) if (isWalkable(this.grid[mo.y + dy]?.[mo.x + dx])) this.dropGear(mo.x + dx, mo.y + dy, 2);
       this.log('The Hollow King crumbles. The stairway ward is broken!', 'boss');
     } else if (r < 0.35) this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'gold', a: rint(4, 12) * this.depth });
     else if (r < 0.5) this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'potion', a: 1 });
+    else if (r < 0.62 + def.tier * 0.04) this.dropGear(mo.x, mo.y, 0);
   }
 
   gainXp(p, xp) {
@@ -409,11 +438,11 @@ export class GameRoom {
       t: 's', depth: this.depth,
       p: [...this.players.values()].map((p) => ({
         id: p.id, n: p.name, c: p.cls, x: p.x, y: p.y, f: p.f, hp: p.hp, mhp: p.mhp, mp: p.mp, mmp: p.mmp,
-        l: p.lvl, xp: p.xp, nx: XP_PER_LEVEL(p.lvl), g: p.gold, po: p.potions, k: p.kills, d: p.dead ? Math.max(0, p.respawnAt - now) : 0,
+        l: p.lvl, xp: p.xp, nx: XP_PER_LEVEL(p.lvl), g: p.gold, po: p.potions, k: p.kills, ar: p.armor, ge: [p.gear.weapon, p.gear.armor, p.gear.charm], d: p.dead ? Math.max(0, p.respawnAt - now) : 0,
         mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
       })),
       m: this.monsters.map((m) => ({ id: m.id, t: m.type, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
-      i: this.items.map((i) => ({ id: i.id, x: i.x, y: i.y, k: i.k })),
+      i: this.items.map((i) => ({ id: i.id, x: i.x, y: i.y, k: i.k, ...(i.g ? { r: i.g.rarity, s: i.g.slot } : {}) })),
       ev: this.events,
     };
     this.events = [];

@@ -39,6 +39,7 @@ check(wa && wa.map.cells.length === wa.map.h, 'welcome contains the dungeon map'
 const st = await waitFor(pb, (m) => m.t === 's' && m.p.length === 2);
 check(!!st, 'both players visible in room state');
 check(st && st.m.length > 0, `monsters spawned (${st?.m.length})`);
+check(st && st.p.every((p) => Array.isArray(p.ge) && p.ge.length === 3 && typeof p.ar === 'number'), 'players carry gear slots + armor in state');
 
 const rooms = await (await fetch(`${BASE}/api/rooms`)).json();
 check(rooms.rooms.some((r) => r.code === code && r.count === 2), 'lobby lists the public room with 2 players');

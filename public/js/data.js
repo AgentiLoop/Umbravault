@@ -127,3 +127,34 @@ export function generateDungeon(seed, depth) {
 }
 
 export const isWalkable = (ch) => ch === '.' || ch === '>';
+// ---------- gear ----------
+export const RARITY = [
+  { name: 'Worn', color: '#c8c8c8', mult: 1 },
+  { name: 'Runed', color: '#4aa8ff', mult: 1.6 },
+  { name: 'Mythic', color: '#c070ff', mult: 2.4 },
+  { name: 'Lantern-Forged', color: '#ffb02e', mult: 3.4 },
+];
+export const SLOTS = {
+  weapon: { icon: '⚔️', label: 'Weapon', bases: ['Blade', 'Maul', 'Staff', 'Bow', 'Dirk', 'Scepter'] },
+  armor: { icon: '🛡️', label: 'Armor', bases: ['Mail', 'Brigandine', 'Robes', 'Plate', 'Leathers', 'Cuirass'] },
+  charm: { icon: '💍', label: 'Charm', bases: ['Ring', 'Amulet', 'Sigil', 'Talisman', 'Locket', 'Idol'] },
+};
+const PREFIX = ['Ashen', 'Gloomwrought', 'Moonlit', 'Ember', 'Hollow', 'Starless', 'Thorned', 'Gilded', 'Wailing', 'Duskforged'];
+const SUFFIX = ['of the Vault', 'of Embers', 'of the Deep', 'of Whispers', 'of the Lantern', 'of Ruin', 'of Dawn', 'of the Wyrm'];
+// rnd: () => [0,1). minRarity lets bosses guarantee good loot.
+export function rollGear(depth, rnd = Math.random, minRarity = 0) {
+  const slotKeys = Object.keys(SLOTS);
+  const slot = slotKeys[Math.floor(rnd() * slotKeys.length)];
+  const roll = rnd() + depth * 0.03;
+  const rarity = Math.max(minRarity, roll > 1.02 ? 3 : roll > 0.9 ? 2 : roll > 0.62 ? 1 : 0);
+  const m = RARITY[rarity].mult * (1 + 0.25 * (depth - 1));
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const g = { slot, rarity, pow: 0, arm: 0, hp: 0, mp: 0 };
+  if (slot === 'weapon') { g.pow = Math.round(6 * m + rnd() * 4 * m); if (rarity >= 2) g.hp = Math.round(5 * m); }
+  else if (slot === 'armor') { g.arm = Math.max(1, Math.round(1 * m)); g.hp = Math.round(10 * m + rnd() * 6 * m); }
+  else { g.mp = Math.round(10 * m + rnd() * 6 * m); g.pow = Math.round(2 * m); if (rarity >= 1) g.hp = Math.round(4 * m); }
+  g.name = `${pick(PREFIX)} ${pick(SLOTS[slot].bases)}${rarity >= 2 ? ' ' + pick(SUFFIX) : ''}`;
+  return g;
+}
+export const gearScore = (g) => (g ? g.pow * 2 + g.arm * 6 + g.hp * 0.5 + g.mp * 0.4 : -1);
+export const gearDesc = (g) => [g.pow && `+${g.pow}% dmg`, g.arm && `+${g.arm} armor`, g.hp && `+${g.hp} HP`, g.mp && `+${g.mp} MP`].filter(Boolean).join(' · ');

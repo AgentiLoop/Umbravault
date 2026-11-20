@@ -27,6 +27,12 @@ Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Ni
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
 Every third depth holds a boss, **The Hollow King**.
 
+### Gear
+Monsters and dungeon rooms drop gear. Each piece glows in its rarity color: **Worn** (grey), **Runed** (blue), **Mythic** (purple) or **Lantern-Forged** (orange).
+There are three slots: Weapon (+% damage), Armor (+armor, +HP) and Charm (+MP, +% damage).
+Walking over a piece equips it automatically if it's better than what you have, and the old piece is salvaged for gold. Weaker pieces are salvaged straight into gold.
+Deeper floors roll stronger gear, and the Hollow King always drops Mythic-or-better loot. Hover over the gear slots in the HUD to see their stats.
+
 ## Architecture
 - `src/worker.js`: routes `/api/quickmatch` (WS → Lobby DO), `/api/rooms`, `/api/create`, and `/ws/:code` (WS → GameRoom DO). It also serves static assets.
 - `src/lobby.js`: the singleton `Lobby` Durable Object, which holds the public room directory and the quick-match queue.

@@ -89,3 +89,7 @@ h2 { font-family: Cinzel, serif; color: var(--gold); margin: 6px 0; }
 .touch button { height: 54px; border-radius: 10px; border: 1px solid var(--edge); background: var(--panel); color: var(--ink); font-size: 22px; }
 @media (pointer: coarse) { .touch { display: grid; } .me { left: 14px; transform: none; } }
 @media (max-width: 760px) { .classes { grid-template-columns: repeat(3, 1fr); } .party { width: 170px; } #minimap { width: 130px; height: 130px; } }
+.log .r0 { color: #c8c8c8; } .log .r1 { color: #4aa8ff; } .log .r2 { color: #c070ff; font-weight: 600; } .log .r3 { color: #ffb02e; font-weight: 700; text-shadow: 0 0 8px #a60; }
+.gear-sep { width: 1px; background: var(--edge); margin: 4px 2px; }
+.ab.gear { cursor: help; width: 46px; height: 46px; font-size: 22px; align-self: flex-end; }
+.ab.gear .key { font-size: 8px; }

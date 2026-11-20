@@ -1,6 +1,6 @@
 // Three.js renderer for Umbravault: grid dungeon, lantern lighting, billboard sprites, spell effects.
 import * as THREE from 'three';
-import { CLASSES, MONSTERS } from './data.js';
+import { CLASSES, MONSTERS, RARITY, SLOTS } from './data.js';
 
 const WALL_H = 1.15;
 const EYE = 0.52;
@@ -297,6 +297,15 @@ export class Renderer {
         o = new THREE.Group();
         const coinMat = new THREE.MeshStandardMaterial({ color: 0xffcc33, metalness: 0.9, roughness: 0.25, emissive: 0x442200 });
         for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.015, 16), coinMat); c.position.set((Math.random() - 0.5) * 0.15, 0.02 + i * 0.016, (Math.random() - 0.5) * 0.15); o.add(c); }
+      } else if (it.k === 'gear') {
+        o = new THREE.Group();
+        const col = RARITY[it.r].color;
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(SLOTS[it.s].icon, col), transparent: true, depthWrite: false }));
+        spr.scale.set(0.4, 0.4, 1); spr.position.y = 0.25;
+        const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 1.0, 12, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12 + it.r * 0.06, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+        beam.position.y = 0.5;
+        o.add(spr, beam);
+        if (it.r >= 1) { const l = new THREE.PointLight(new THREE.Color(col), 1 + it.r, 2.5, 1.5); l.position.y = 0.3; o.add(l); }
       } else {
         o = new THREE.Group();
         const bottle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshStandardMaterial({ color: 0xff2244, emissive: 0x660011, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9 }));
@@ -373,6 +382,7 @@ export class Renderer {
       case 'veil': this.sparkle(ev.x, ev.y, 0x6644aa, 40); break;
       case 'levelup': this.ringWave(ev.x, ev.y, 0xffd700, 1.5, 1); this.sparkle(ev.x, ev.y, 0xffd700, 60, 1.4); break;
       case 'pickup': this.sparkle(ev.x, ev.y, 0xffdd55, 16, 0.6); break;
+      case 'equip': this.ringWave(ev.x, ev.y, new THREE.Color(RARITY[ev.r].color), 0.8, 0.7); this.sparkle(ev.x, ev.y, new THREE.Color(RARITY[ev.r].color), 30 + ev.r * 15); break;
       case 'death': this.burst(ev.x, ev.y, 0x880000, 0.5, 0.5); this.sparkle(ev.x, ev.y, 0x551111, 30); break;
       case 'pdeath': this.burst(ev.x, ev.y, 0x6600aa, 0.8, 0.8); break;
       case 'swing': if (ev.pid === selfId) this.swingFlash(); break;
