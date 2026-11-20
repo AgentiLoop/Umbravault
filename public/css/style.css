@@ -15,7 +15,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #050307; col
 input { width: 100%; margin-top: 6px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--edge); background: rgba(0,0,0,0.5); color: var(--ink); font-size: 16px; outline: none; }
 input:focus { border-color: var(--gold); box-shadow: 0 0 12px rgba(232,194,106,0.3); }
 .label { margin: 18px 0 8px; text-align: left; font-family: Cinzel, serif; color: var(--gold); font-size: 13px; letter-spacing: 0.1em; }
-.classes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.classes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 .cls { cursor: pointer; padding: 12px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); transition: all 0.15s; }
 .cls:hover { transform: translateY(-2px); background: rgba(255,255,255,0.07); }
 .cls.sel { border-color: var(--c); box-shadow: 0 0 18px var(--c), inset 0 0 18px rgba(255,255,255,0.05); }

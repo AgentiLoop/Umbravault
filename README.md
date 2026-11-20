@@ -26,7 +26,7 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 | Enter | chat (appears as a speech bubble over your hero) |
 
 ### Callings (classes)
-Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Nightblade 🗡️ (rogue) and Thornwarden 🏹 (archer).
+Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Nightblade 🗡️ (rogue), Thornwarden 🏹 (archer) and Hexweaver 🕯️ (warlock: life-draining bolts, a crowd curse and a damage-reducing party ward).
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
 Every third depth holds a boss, and the three bosses rotate. **The Hollow King** (depth 3) raises skeletons. **The Brood Matriarch** (depth 6) births spider swarms. **The Ember Tyrant** (depth 9) gathers a firestorm: watch for the red ring and step more than 2 paces away before it erupts. Once a boss wakes, its health bar appears for the whole party. Killing it breaks the stairway ward and destroys its minions.
 

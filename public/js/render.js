@@ -454,6 +454,9 @@ export class Renderer {
       case 'thorn': this.ringWave(ev.x, ev.y, 0x66dd44, ev.r); this.sparkle(ev.x, ev.y, 0x88ff55, 40); break;
       case 'nova': this.ringWave(ev.x, ev.y, 0xffffff, ev.r); break;
       case 'heal': this.sparkle(ev.x, ev.y, 0x66ff88, 30); break;
+      case 'drain': this.projectile({ x: ev.x, y: ev.y }, { x: ev.tx, y: ev.ty }, 0xe0306a, 0.05); setTimeout(() => this.sparkle(ev.x, ev.y, 0xff4a8a, 14, 0.6), 250); break;
+      case 'hex': this.ringWave(ev.x, ev.y, 0x9a2a6a, ev.r); this.sparkle(ev.x, ev.y, 0xc04a9a, 50, 1.0); break;
+      case 'ward': this.ringWave(ev.x, ev.y, 0xf0e0d0, 0.7, 0.8); this.sparkle(ev.x, ev.y, 0xffeedd, 30); break;
       case 'might': this.sparkle(ev.x, ev.y, 0xff9933, 30); break;
       case 'veil': this.sparkle(ev.x, ev.y, 0x6644aa, 40); break;
       case 'levelup': this.ringWave(ev.x, ev.y, 0xffd700, 1.5, 1); this.sparkle(ev.x, ev.y, 0xffd700, 60, 1.4); break;

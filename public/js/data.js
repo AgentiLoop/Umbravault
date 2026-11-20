@@ -63,6 +63,16 @@ export const CLASSES = {
   },
 };
 
+CLASSES.hexweaver = {
+  name: 'Hexweaver', icon: '🕯️', color: '#e0508a',
+  desc: 'Pact-bound warlock. Steals life, curses crowds, wards the party.',
+  hp: 90, mp: 110, armor: 1, hpPerLvl: 10, mpPerLvl: 11,
+  abilities: [
+    { id: 'drain', name: 'Soul Drain', icon: '🩸', kind: 'ranged', dmg: [9, 14], range: 7, drain: 0.5, cd: 750, mp: 0, fx: 'drain', desc: 'Siphon a foe — heals you for half the damage.' },
+    { id: 'hex', name: 'Withering Hex', icon: '🕸️', kind: 'aoe', dmg: [14, 22], radius: 3, stun: 1500, cd: 9000, mp: 30, fx: 'hex', desc: 'Curse every foe within 3 paces, staggering them.' },
+    { id: 'ward', name: 'Bone Ward', icon: '🦴', kind: 'buff', buff: 'ward', dur: 8000, radius: 5, cd: 20000, mp: 25, desc: 'Allies nearby take 35% less damage.' },
+  ],
+};
 export const MONSTERS = {
   rat: { name: 'Gloom Rat', icon: '🐀', hp: 22, dmg: [3, 6], xp: 8, speed: 450, atkCd: 900, tier: 0 },
   goblin: { name: 'Mire Goblin', icon: '👺', hp: 34, dmg: [5, 9], xp: 14, speed: 550, atkCd: 1100, tier: 0 },

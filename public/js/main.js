@@ -336,7 +336,7 @@ function updateHud(depth) {
   $('#stats').innerHTML = `<b style="color:${c.color}">${c.icon} Lv ${me.l}</b><br>💰 ${me.g} · 🛡️ ${me.ar}<br>☠️ ${me.k} kills`;
   $('#party').innerHTML = S.players.map((p) => {
     const pc = CLASSES[p.c];
-    const buffs = (p.o ? '📡' : '') + (p.mi ? '📯' : '') + (p.ve ? '🌑' : '') + (p.v ? '⬇️' : '');
+    const buffs = (p.o ? '📡' : '') + (p.mi ? '📯' : '') + (p.ve ? '🌑' : '') + (p.wa ? '🦴' : '') + (p.v ? '⬇️' : '');
     return `<div class="pf ${p.id === S.id ? 'self' : ''} ${p.d || p.o ? 'dead' : ''}" style="--c:${pc.color}">
       <div class="row"><span class="nm">${pc.icon} ${esc(p.n)}</span><span>Lv ${p.l} <span class="buffs">${buffs}</span></span></div>
       <div class="mini"><div style="width:${(100 * p.hp) / p.mhp}%;background:linear-gradient(90deg,#a11,#e44)"></div></div>

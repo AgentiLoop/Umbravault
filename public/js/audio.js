@@ -92,6 +92,9 @@ export class Sound {
       case 'holy': [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.7, 'triangle', 0.1 * v, null, i * 0.05)); break;
       case 'thorn': this.noise(0.5, 0.2 * v, 'bandpass', 300, 900); this.tone(140, 0.4, 'sawtooth', 0.06 * v, 70); break;
       case 'heal': [660, 880, 1100].forEach((f, i) => this.tone(f, 0.45, 'sine', 0.1 * v, null, i * 0.08)); break;
+      case 'drain': this.tone(600, 0.3, 'sine', 0.14 * v, 180); this.tone(180, 0.35, 'sine', 0.08 * v, 600, 0.2); break;
+      case 'hex': this.tone(110, 0.7, 'sawtooth', 0.1 * v, 55); this.noise(0.6, 0.15 * v, 'bandpass', 500, 150); this.tone(233, 0.6, 'triangle', 0.08 * v, 220); break;
+      case 'ward': this.tone(300, 0.5, 'square', 0.06 * v, 320); this.noise(0.3, 0.12 * v, 'bandpass', 1200, 600); break;
       case 'might': this.tone(220, 0.6, 'sawtooth', 0.12 * v, 440); this.tone(330, 0.6, 'sawtooth', 0.08 * v, 660); break;
       case 'veil': this.tone(400, 0.6, 'sine', 0.12 * v, 90); this.noise(0.6, 0.08 * v, 'lowpass', 800, 100); break;
       case 'levelup': [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.35, 'square', 0.07, null, i * 0.08)); break;

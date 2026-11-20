@@ -179,7 +179,7 @@ export class GameRoom {
       id: this.nextId++, ws, token, heroKey, lastSave: Date.now(), goneAt: 0, name, cls, x: 0, y: 0, f: 1,
       hp: def.hp, mhp: def.hp, mp: def.mp, mmp: def.mp, armor: def.armor,
       lvl: 1, xp: 0, gold: 0, potions: 2, kills: 0, gear: { weapon: null, armor: null, charm: null },
-      cds: [0, 0, 0], might: 0, veil: 0, dead: false, respawnAt: 0, lastMove: 0, lastPotion: 0, vote: false,
+      cds: [0, 0, 0], might: 0, veil: 0, ward: 0, dead: false, respawnAt: 0, lastMove: 0, lastPotion: 0, vote: false,
     };
     if (saved) this.applyHero(p, saved);
     this.players.set(p.id, p);
@@ -409,11 +409,12 @@ export class GameRoom {
       this.log(`${p.name} calls down Mending Light.`, 'heal');
     } else if (ab.kind === 'buff') {
       if (ab.buff === 'veil') { p.veil = now + ab.dur; for (const mo of this.monsters) mo.aggro = false; this.fx({ k: 'veil', x: p.x, y: p.y }); }
-      else for (const o of this.players.values()) if (!o.dead && cheb(o, p) <= ab.radius) { o.might = now + ab.dur; this.fx({ k: 'might', x: o.x, y: o.y }); }
+      else for (const o of this.players.values()) if (!o.dead && cheb(o, p) <= ab.radius) { o[ab.buff] = now + ab.dur; this.fx({ k: ab.buff, x: o.x, y: o.y }); }
       this.log(`${p.name} uses ${ab.name}!`, 'ability');
     }
     if (!ab.dmg) return;
     const wasVeiled = p.veil > now;
+    let dealt = 0;
     for (const mo of hit) {
       const def = MONSTERS[mo.type];
       let dmg = rint(...ab.dmg) * (1 + 0.12 * (p.lvl - 1)) * (1 + this.gearPow(p) / 100);
@@ -423,13 +424,14 @@ export class GameRoom {
       if (crit) dmg *= 1.75;
       if (mo.e === 'stoneskin') dmg *= 0.65;
       dmg = Math.round(dmg);
-      mo.hp -= dmg;
+      mo.hp -= dmg; dealt += dmg;
       mo.aggro = true;
       if (ab.stun) mo.stun = now + ab.stun;
       this.fx({ k: 'dmg', x: mo.x, y: mo.y, v: dmg, crit, mid: mo.id });
       if (mo.hp <= 0) this.killMonster(mo, p);
     }
     if (hit.length) p.veil = 0;
+    if (ab.drain && dealt) this.healPlayer(p, Math.round(dealt * ab.drain));
   }
 
   gearPow(p) { return Object.values(p.gear).reduce((s, g) => s + (g ? g.pow : 0), 0); }
@@ -585,7 +587,7 @@ export class GameRoom {
       if ((adjacent || inRange) && now >= mo.nextAtk) {
         mo.nextAtk = now + def.atkCd * (mo.e === 'swift' ? 0.7 : 1);
         mo.f = DIRS.findIndex(([dx, dy]) => dx === Math.sign(nearest.x - mo.x) && dy === Math.sign(nearest.y - mo.y));
-        const dmg = Math.max(1, Math.round(rint(...def.dmg) * (mo.e === 'frenzied' ? 1.4 : 1) * (1 + 0.1 * (this.depth - 1))) - nearest.armor);
+        const dmg = Math.max(1, Math.round(rint(...def.dmg) * (mo.e === 'frenzied' ? 1.4 : 1) * (nearest.ward > now ? 0.65 : 1) * (1 + 0.1 * (this.depth - 1))) - nearest.armor);
         nearest.hp -= dmg;
         if (mo.e === 'vampiric') mo.hp = Math.min(mo.mhp, mo.hp + Math.round(dmg * 0.5));
         if (nearest.rev) { nearest.rev = null; this.send(nearest.ws, { t: 'toast', text: 'Revive interrupted!' }); }
@@ -615,7 +617,7 @@ export class GameRoom {
       p: [...this.players.values()].map((p) => ({
         id: p.id, n: p.name, c: p.cls, x: p.x, y: p.y, f: p.f, hp: p.hp, mhp: p.mhp, mp: p.mp, mmp: p.mmp,
         l: p.lvl, xp: p.xp, nx: XP_PER_LEVEL(p.lvl), g: p.gold, po: p.potions, k: p.kills, ar: p.armor, ge: [p.gear.weapon, p.gear.armor, p.gear.charm], d: p.dead ? Math.max(0, p.respawnAt - now) : 0,
-        mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
+        mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), wa: Math.max(0, p.ward - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
         rv: p.rev ? Math.min(1, (now - p.rev.start) / (p.rev.end - p.rev.start)) : 0, rt: p.rev ? p.rev.tid : 0,
       })),
       m: this.monsters.map((m) => ({ id: m.id, t: m.type, e: m.e, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
