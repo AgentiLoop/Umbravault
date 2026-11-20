@@ -106,6 +106,15 @@ export const EMOTES = [
   { icon: '➡️', text: 'Follow me!' },
   { icon: '🎉', text: 'Victory!' },
 ];
+// visual themes cycle with depth: tints for walls/floor, fog, ambient light, torch flame and drifting motes
+export const THEMES = [
+  { name: 'Sunken Crypt', wall: 0xffffff, floor: 0xffffff, fog: 0x050307, fogD: 0.11, amb: 0x3a3050, hemi: 0x4a4080, torch: 0xff8a2a, flame: 0xffaa33, dust: 0xffd9a0 },
+  { name: 'Mosswood Grotto', wall: 0x9fd28a, floor: 0xa8c890, fog: 0x03100a, fogD: 0.13, amb: 0x1e4030, hemi: 0x3a8050, torch: 0x7dff6a, flame: 0xb8ff7a, dust: 0x9dff8a },
+  { name: 'Rimefrost Halls', wall: 0xb8d8ff, floor: 0xcfe4ff, fog: 0x060c18, fogD: 0.09, amb: 0x304868, hemi: 0x6090d0, torch: 0x66ccff, flame: 0xbfeaff, dust: 0xffffff },
+  { name: 'Ember Forge', wall: 0xff9a70, floor: 0xd08060, fog: 0x140402, fogD: 0.12, amb: 0x502018, hemi: 0xa04020, torch: 0xff5a1a, flame: 0xffd040, dust: 0xff8a3a },
+  { name: 'Abyssal Sanctum', wall: 0xb090ff, floor: 0x9a80d0, fog: 0x08030f, fogD: 0.12, amb: 0x34205a, hemi: 0x7040c0, torch: 0xc070ff, flame: 0xf0b0ff, dust: 0xd8a0ff },
+];
+export const themeForDepth = (d) => THEMES[((d || 1) - 1) % THEMES.length];
 export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
 
 export function mulberry32(seed) {

@@ -1,6 +1,6 @@
 // Three.js renderer for Umbravault: grid dungeon, lantern lighting, billboard sprites, spell effects.
 import * as THREE from 'three';
-import { CLASSES, MONSTERS, RARITY, SLOTS, AFFIXES } from './data.js';
+import { CLASSES, MONSTERS, RARITY, SLOTS, AFFIXES, themeForDepth } from './data.js';
 
 const WALL_H = 1.15;
 const EYE = 0.52;
@@ -124,8 +124,8 @@ export class Renderer {
     this.lantern = new THREE.PointLight(0xffb366, 7, 10, 1.1);
     this.lantern.position.set(0.15, 0.05, 0);
     this.camera.add(this.lantern);
-    this.scene.add(new THREE.AmbientLight(0x3a3050, 1.6));
-    this.scene.add(new THREE.HemisphereLight(0x4a4080, 0x201010, 1.0));
+    this.ambient = new THREE.AmbientLight(0x3a3050, 1.6); this.scene.add(this.ambient);
+    this.hemi = new THREE.HemisphereLight(0x4a4080, 0x201010, 1.0); this.scene.add(this.hemi);
     this.tex = { stone: stoneTex(), floor: floorTex(), ceil: ceilTex() };
     this.level = new THREE.Group(); this.scene.add(this.level);
     this.entities = new THREE.Group(); this.scene.add(this.entities);
@@ -157,6 +157,10 @@ export class Renderer {
 
   buildLevel(map) {
     this.map = map;
+    const th = this.theme = themeForDepth(map.depth);
+    this.scene.background.setHex(th.fog); this.scene.fog.color.setHex(th.fog); this.scene.fog.density = th.fogD;
+    this.ambient.color.setHex(th.amb); this.hemi.color.setHex(th.hemi);
+    this.dust.material.color.setHex(th.dust);
     for (const o of [...this.level.children]) { this.level.remove(o); o.geometry?.dispose?.(); }
     for (const t of this.torches) this.scene.remove(t.light);
     this.torches = [];
@@ -170,12 +174,12 @@ export class Renderer {
       if (at(x, y) !== '#') continue;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([dx, dy]) => open(at(x + dx, y + dy)))) wallCells.push([x, y]);
     }
-    const wallMat = new THREE.MeshStandardMaterial({ map: this.tex.stone, roughness: 0.92, metalness: 0.02 });
+    const wallMat = new THREE.MeshStandardMaterial({ map: this.tex.stone, color: th.wall, roughness: 0.92, metalness: 0.02 });
     const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(1, WALL_H, 1), wallMat, wallCells.length);
     const m4 = new THREE.Matrix4();
     wallCells.forEach(([x, y], i) => { m4.makeTranslation(x, WALL_H / 2, y); walls.setMatrixAt(i, m4); });
     this.level.add(walls);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: this.tex.floor, roughness: 0.85 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: this.tex.floor, color: th.floor, roughness: 0.85 }));
     this.tex.floor.repeat.set(w, h);
     floor.rotation.x = -Math.PI / 2; floor.position.set(w / 2 - 0.5, 0, h / 2 - 0.5);
     this.level.add(floor);
@@ -224,11 +228,11 @@ export class Renderer {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         if (at(x + dx, y + dy) !== '.') continue;
         const px = x + dx * 0.56, py = y + dy * 0.56;
-        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa33 }));
+        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), new THREE.MeshBasicMaterial({ color: th.flame }));
         flame.position.set(px, 0.78, py);
         const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.18, 6), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
         stick.position.set(px, 0.68, py);
-        const light = new THREE.PointLight(0xff8a2a, 4, 5, 1.3); light.position.set(x + dx * 0.7, 0.8, y + dy * 0.7);
+        const light = new THREE.PointLight(th.torch, 4, 5, 1.3); light.position.set(x + dx * 0.7, 0.8, y + dy * 0.7);
         this.level.add(flame, stick); this.scene.add(light);
         this.torches.push({ light, flame, seed: Math.random() * 100 });
         placed++;

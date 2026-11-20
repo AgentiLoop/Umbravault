@@ -1,5 +1,5 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
-import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, EMOTES } from './data.js';
+import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, EMOTES, themeForDepth, bossForDepth } from './data.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 
@@ -141,13 +141,13 @@ function onMsg(m, ws) {
       $('#room-code').textContent = `🔗 ${m.code}${m.public ? ' · public' : ' · private'}`;
       showScreen('game');
       S.first = true;
-      toast(m.resumed ? 'Reconnected — welcome back!' : `Depth ${m.map.depth}`);
+      toast(m.resumed ? 'Reconnected — welcome back!' : `Depth ${m.map.depth} · ${themeForDepth(m.map.depth).name}`);
       break;
     case 'level':
       loadMap(m.map);
       S.first = true;
       sfx.descend();
-      toast(`Depth ${m.map.depth}${m.map.depth % 3 === 0 ? '<br><small>The Hollow King awaits…</small>' : ''}`, 3000);
+      toast(`Depth ${m.map.depth} · ${themeForDepth(m.map.depth).name}${m.map.depth % 3 === 0 ? `<br><small>${MONSTERS[bossForDepth(m.map.depth)].name} awaits…</small>` : ''}`, 3000);
       break;
     case 'bump': S.me.x = m.x; S.me.y = m.y; renderer.setCamera(m.x, m.y, S.me.f); renderer.shake(0.03); sfx.bump(); break;
     case 'toast': toast(m.text); break;
@@ -309,7 +309,7 @@ function updateHud(depth) {
   const me = S.self;
   if (!me) return;
   if (S.abBuilt !== me.c) buildAbilities();
-  $('#depth').textContent = `Depth ${depth}`;
+  $('#depth').textContent = `Depth ${depth} · ${themeForDepth(depth).name}`;
   $('#compass').textContent = COMPASS[S.me.f];
   const setBar = (sel, v, max, txt) => { $(`${sel} > div`).style.width = `${(100 * v) / max}%`; $(`${sel} span`).textContent = txt; };
   setBar('.bar.hp', me.hp, me.mhp, `${me.hp} / ${me.mhp}`);

@@ -30,6 +30,8 @@ Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Ni
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
 Every third depth holds a boss, and the three bosses rotate. **The Hollow King** (depth 3) raises skeletons. **The Brood Matriarch** (depth 6) births spider swarms. **The Ember Tyrant** (depth 9) gathers a firestorm: watch for the red ring and step more than 2 paces away before it erupts. Once a boss wakes, its health bar appears for the whole party. Killing it breaks the stairway ward and destroys its minions.
 
+### Floor themes
+Each depth has its own look, cycling through five: Sunken Crypt, Mosswood Grotto (green torchlight), Rimefrost Halls (icy blue), Ember Forge (red-hot) and Abyssal Sanctum (violet). Each theme tints the stone and floor and changes the fog, ambient light, torch flames and drifting motes.
 ### Elite monsters
 Some monsters spawn as **elites**: about 9% on depth 1, rising to about 22% by depth 8. An elite has 2.2× HP and one affix, shown by a colored glow, a ring and a name label:
 💨 Swift (moves and attacks faster), 🩸 Vampiric (heals from its hits), 🪨 Stoneskin (takes 35% less damage), 💢 Frenzied (hits 40% harder) and 🌋 Molten (explodes when slain, so step back).
