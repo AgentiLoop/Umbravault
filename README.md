@@ -3,6 +3,8 @@
 A 1–8 player online, first-person, grid-based dungeon crawler in the spirit of the classic
 step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**, and the browser client uses **Three.js**.
 
+**Play now:** https://umbravault.todd-de8.workers.dev
+
 ## Play
 - **Quick Match**: joins the matchmaking queue. You're dropped into an open public expedition that has room,
   or grouped with other waiting wanderers (up to 8). If you're the only one waiting for 6s, you get your own public room and the next players are matched into it.
@@ -70,5 +72,6 @@ Deeper floors roll stronger gear, and the Hollow King always drops Mythic-or-bet
 npm install
 npx wrangler dev --port 8799      # local
 npm test                          # smoke test against the local dev server
+BASE=https://umbravault.todd-de8.workers.dev npm test   # smoke test against production
 npx wrangler deploy               # deploy to Cloudflare
 ```
