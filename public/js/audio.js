@@ -102,6 +102,7 @@ export class Sound {
       case 'claw': this.noise(0.12, 0.2 * v, 'bandpass', 1800, 500); break;
       case 'mbolt': this.tone(300, 0.3, 'sawtooth', 0.1 * v, 120); break;
       case 'num': if (!ev.heal && ev.pid === selfId) { this.tone(110, 0.2, 'square', 0.15, 55); this.noise(0.15, 0.2, 'lowpass', 700); } break;
+      case 'revive': [440, 554, 659, 880, 1109].forEach((f, i) => this.tone(f, 0.6, 'sine', 0.1, null, i * 0.09)); break;
       case 'pdeath': [392, 330, 262, 196].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.12, null, i * 0.18)); break;
     }
   }

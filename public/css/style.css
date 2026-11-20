@@ -93,3 +93,7 @@ h2 { font-family: Cinzel, serif; color: var(--gold); margin: 6px 0; }
 .gear-sep { width: 1px; background: var(--edge); margin: 4px 2px; }
 .ab.gear { cursor: help; width: 46px; height: 46px; font-size: 22px; align-self: flex-end; }
 .ab.gear .key { font-size: 8px; }
+.channel { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); width: 260px; height: 18px; border-radius: 9px; background: rgba(0,0,0,0.7); border: 1px solid #ffe9a0; overflow: hidden; }
+.channel > div { height: 100%; background: linear-gradient(90deg, #c9a23a, #fff2b0); }
+.channel span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1006; }
+#dead-help { color: #ffe9a0; }

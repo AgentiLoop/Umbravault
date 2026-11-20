@@ -384,6 +384,7 @@ export class Renderer {
       case 'pickup': this.sparkle(ev.x, ev.y, 0xffdd55, 16, 0.6); break;
       case 'equip': this.ringWave(ev.x, ev.y, new THREE.Color(RARITY[ev.r].color), 0.8, 0.7); this.sparkle(ev.x, ev.y, new THREE.Color(RARITY[ev.r].color), 30 + ev.r * 15); break;
       case 'death': this.burst(ev.x, ev.y, 0x880000, 0.5, 0.5); this.sparkle(ev.x, ev.y, 0x551111, 30); break;
+      case 'revive': this.ringWave(ev.x, ev.y, 0xfff4b0, 1.2, 0.9); this.burst(ev.x, ev.y, 0xffffcc, 0.9, 0.7); this.sparkle(ev.x, ev.y, 0xffeeaa, 60, 1.3); break;
       case 'pdeath': this.burst(ev.x, ev.y, 0x6600aa, 0.8, 0.8); break;
       case 'swing': if (ev.pid === selfId) this.swingFlash(); break;
       case 'claw': this.burst(ev.tx, ev.ty, 0xff2222, 0.25, 0.25); break;

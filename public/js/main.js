@@ -225,6 +225,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'Digit2') send({ t: 'act', i: 2 });
   else if (e.code === 'KeyH' || e.code === 'Digit3') send({ t: 'potion' });
   else if (e.code === 'KeyG') send({ t: 'descend' });
+  else if (e.code === 'KeyR') send({ t: 'revive' });
   else if (e.code === 'KeyM') { sfx.toggleMute(); muteLabel(); }
 });
 addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) held.delete(a); });
@@ -304,7 +305,17 @@ function updateHud(depth) {
     </div>`;
   }).join('');
   $('#dead').classList.toggle('hidden', !me.d);
-  if (me.d) $('#dead-t').textContent = Math.ceil(me.d / 1000);
+  if (me.d) {
+    $('#dead-t').textContent = Math.ceil(me.d / 1000);
+    const saver = S.players.find((p) => p.rt === me.id);
+    $('#dead-help').textContent = saver ? `${saver.n} is reviving you… ${Math.round(saver.rv * 100)}%` : 'An ally can revive you sooner (R).';
+  }
+  // revive channel bar + hint when standing beside a fallen ally
+  $('#channel').classList.toggle('hidden', !me.rv);
+  if (me.rv) { const t = S.players.find((p) => p.id === me.rt); $('#channel div').style.width = `${me.rv * 100}%`; $('#channel span').textContent = `Reviving ${t ? t.n : ''}…`; }
+  const fallen = !me.d && S.players.find((p) => p.id !== S.id && p.d && !p.o && Math.max(Math.abs(p.x - S.me.x), Math.abs(p.y - S.me.y)) <= 1);
+  if (fallen && S.reviveHint !== fallen.id && !me.rv) toast(`Press <b>R</b> to revive ${esc(fallen.n)}`);
+  S.reviveHint = fallen ? fallen.id : 0;
   // target frame: monster directly ahead (up to 8 cells in line)
   const [dx, dy] = DIRS[S.me.f];
   let tgt = null;

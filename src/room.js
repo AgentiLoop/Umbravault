@@ -3,7 +3,8 @@ import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, is
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
-const RESPAWN_MS = 8000;
+const RESPAWN_MS = 15000;
+const REVIVE_MS = 2500; // channel time to pull a fallen ally back (Lightwarden: 1000)
 const GRACE_MS = 60000; // a disconnected player's character is kept this long for reconnects
 const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
@@ -176,7 +177,7 @@ export class GameRoom {
         const [dx, dy] = DIRS[m.d];
         const nx = p.x + dx, ny = p.y + dy;
         if (!isWalkable(this.grid[ny]?.[nx]) || this.monsterAt(nx, ny)) { this.send(p.ws, { t: 'bump', x: p.x, y: p.y }); break; }
-        p.x = nx; p.y = ny; p.lastMove = now;
+        p.x = nx; p.y = ny; p.lastMove = now; p.rev = null;
         this.pickup(p);
         break;
       }
@@ -188,6 +189,7 @@ export class GameRoom {
         this.fx({ k: 'heal', x: p.x, y: p.y });
         break;
       case 'descend': this.voteDescend(p); break;
+      case 'revive': this.startRevive(p, now); break;
       case 'chat': {
         const text = String(m.text || '').slice(0, 140).trim();
         if (text) this.events.push({ e: 'chat', from: p.name, cls: p.cls, text });
@@ -217,6 +219,28 @@ export class GameRoom {
       const gold = Math.max(1, Math.round(gearScore(g) * 2));
       p.gold += gold;
       this.log(`${p.name} salvages a ${r} ${g.name} for ${gold} gold.`, 'loot');
+    }
+  }
+  startRevive(p, now) {
+    if (p.dead || p.rev) return;
+    const t = [...this.players.values()].find((o) => o !== p && o.dead && !o.goneAt && cheb(o, p) <= 1);
+    if (!t) { this.send(p.ws, { t: 'toast', text: 'Stand beside a fallen ally to revive them.' }); return; }
+    const dur = p.cls === 'lightwarden' ? 1000 : REVIVE_MS;
+    p.rev = { tid: t.id, start: now, end: now + dur };
+    this.log(`${p.name} kneels beside ${t.name}…`, 'heal');
+  }
+  tickRevives(now) {
+    for (const p of this.players.values()) {
+      if (!p.rev) continue;
+      const t = this.players.get(p.rev.tid);
+      if (p.dead || !t || !t.dead || t.goneAt || cheb(t, p) > 1) { p.rev = null; continue; }
+      if (now < p.rev.end) continue;
+      p.rev = null;
+      t.dead = false; t.respawnAt = 0;
+      t.hp = Math.round(t.mhp * 0.4); t.mp = Math.round(t.mmp * 0.3);
+      this.log(`${p.name} pulls ${t.name} back from the Veil!`, 'heal');
+      this.fx({ k: 'revive', x: t.x, y: t.y, pid: t.id });
+      this.gainXp(p, 10 * this.depth);
     }
   }
   pickup(p) {
@@ -384,6 +408,7 @@ export class GameRoom {
       this.lastRegen = now;
       for (const p of players) if (!p.dead) { p.mp = Math.min(p.mmp, p.mp + 2 + Math.floor(p.mmp / 50)); if (p.hp < p.mhp) p.hp = Math.min(p.mhp, p.hp + 1); }
     }
+    this.tickRevives(now);
     for (const p of players) if (p.dead && now >= p.respawnAt) {
       p.dead = false; this.placeAtStart(p, false); p.hp = Math.round(p.mhp * 0.6); p.mp = Math.round(p.mmp * 0.5);
       this.log(`${p.name} is drawn back from the Veil.`, 'respawn');
@@ -408,6 +433,7 @@ export class GameRoom {
         mo.f = DIRS.findIndex(([dx, dy]) => dx === Math.sign(nearest.x - mo.x) && dy === Math.sign(nearest.y - mo.y));
         const dmg = Math.max(1, Math.round(rint(...def.dmg) * (1 + 0.1 * (this.depth - 1))) - nearest.armor);
         nearest.hp -= dmg;
+        if (nearest.rev) { nearest.rev = null; this.send(nearest.ws, { t: 'toast', text: 'Revive interrupted!' }); }
         this.fx({ k: adjacent ? 'claw' : 'mbolt', x: mo.x, y: mo.y, tx: nearest.x, ty: nearest.y, mid: mo.id });
         this.fx({ k: 'num', x: nearest.x, y: nearest.y, v: dmg, pid: nearest.id });
         if (nearest.hp <= 0) {
@@ -440,6 +466,7 @@ export class GameRoom {
         id: p.id, n: p.name, c: p.cls, x: p.x, y: p.y, f: p.f, hp: p.hp, mhp: p.mhp, mp: p.mp, mmp: p.mmp,
         l: p.lvl, xp: p.xp, nx: XP_PER_LEVEL(p.lvl), g: p.gold, po: p.potions, k: p.kills, ar: p.armor, ge: [p.gear.weapon, p.gear.armor, p.gear.charm], d: p.dead ? Math.max(0, p.respawnAt - now) : 0,
         mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
+        rv: p.rev ? Math.min(1, (now - p.rev.start) / (p.rev.end - p.rev.start)) : 0, rt: p.rev ? p.rev.tid : 0,
       })),
       m: this.monsters.map((m) => ({ id: m.id, t: m.type, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
       i: this.items.map((i) => ({ id: i.id, x: i.x, y: i.y, k: i.k, ...(i.g ? { r: i.g.rarity, s: i.g.slot } : {}) })),
