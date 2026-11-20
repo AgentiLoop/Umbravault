@@ -76,6 +76,12 @@ CLASSES.hexweaver = {
 export const MONSTERS = {
   rat: { name: 'Gloom Rat', icon: '🐀', hp: 22, dmg: [3, 6], xp: 8, speed: 450, atkCd: 900, tier: 0 },
   goblin: { name: 'Mire Goblin', icon: '👺', hp: 34, dmg: [5, 9], xp: 14, speed: 550, atkCd: 1100, tier: 0 },
+  bandit: { name: 'Hooded Cutthroat', icon: '🥷', hp: 30, dmg: [5, 9], xp: 14, speed: 500, atkCd: 950, tier: 0, human: true },
+  archer: { name: 'Brigand Archer', icon: '🎯', hp: 32, dmg: [6, 10], xp: 22, speed: 650, atkCd: 1600, range: 5, tier: 1, human: true },
+  orc: { name: 'Tusked Marauder', icon: '🪓', hp: 58, dmg: [8, 14], xp: 26, speed: 650, atkCd: 1300, tier: 1 },
+  mage: { name: 'Renegade Battlemage', icon: '🔵', hp: 48, dmg: [10, 16], xp: 36, speed: 750, atkCd: 1700, range: 5, tier: 2, human: true },
+  knight: { name: 'Fallen Knight', icon: '⚔️', hp: 90, dmg: [10, 16], xp: 40, speed: 800, atkCd: 1300, tier: 2, human: true },
+  blackguard: { name: 'Blackguard Captain', icon: '🛡️', hp: 120, dmg: [14, 22], xp: 62, speed: 800, atkCd: 1400, tier: 3, human: true },
   skeleton: { name: 'Bone Rattler', icon: '💀', hp: 45, dmg: [6, 11], xp: 20, speed: 700, atkCd: 1200, undead: true, tier: 1 },
   spider: { name: 'Vault Spider', icon: '🕷️', hp: 38, dmg: [7, 12], xp: 22, speed: 400, atkCd: 1000, tier: 1 },
   cultist: { name: 'Ember Cultist', icon: '🧙', hp: 40, dmg: [8, 13], xp: 26, speed: 750, atkCd: 1800, range: 5, tier: 1 },

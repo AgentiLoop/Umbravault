@@ -35,6 +35,12 @@ Every third depth holds a boss, and the three bosses rotate. **The Hollow King**
 
 ### Floor themes
 Each depth has its own look, cycling through five: Sunken Crypt, Mosswood Grotto (green torchlight), Rimefrost Halls (icy blue), Ember Forge (red-hot) and Abyssal Sanctum (violet). Each theme tints the stone and floor and changes the fog, ambient light, torch flames and drifting motes.
+### Foes
+Every foe is a fully 3D, animated model built procedurally in `public/js/models.js`, with walk cycles, attack swings, hit flashes, stun tint and a death fall. There are no flat sprites.
+- **Outlaws and soldiers:** Hooded Cutthroat (twin daggers), Brigand Archer (bow), Tusked Marauder (orc with greataxe), Renegade Battlemage (blue-orb staff), Fallen Knight (plate, sword and shield) and Blackguard Captain (horned plate, greatsword).
+- **Creatures and undead:** Gloom Rat, Mire Goblin, Vault Spider, Bone Rattler (skeleton), Ember Cultist, Crypt Ghoul, Pale Wraith and Cavern Ogre.
+- **Bosses:** the crowned skeletal Hollow King, the scorpion-tailed Brood Matriarch and the winged, horned Ember Tyrant.
+
 ### Elite monsters
 Some monsters spawn as **elites**: about 9% on depth 1, rising to about 22% by depth 8. An elite has 2.2× HP and one affix, shown by a colored glow, a ring and a name label:
 💨 Swift (moves and attacks faster), 🩸 Vampiric (heals from its hits), 🪨 Stoneskin (takes 35% less damage), 💢 Frenzied (hits 40% harder) and 🌋 Molten (explodes when slain, so step back).

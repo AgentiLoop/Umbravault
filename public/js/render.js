@@ -1,8 +1,10 @@
 // Three.js renderer for Umbravault: grid dungeon, lantern lighting, billboard sprites, spell effects.
 import * as THREE from 'three';
 import { CLASSES, MONSTERS, RARITY, SLOTS, AFFIXES, themeForDepth } from './data.js';
+import { buildMonsterModel, tintModel } from './models.js';
 
 const WALL_H = 1.15;
+const DIRV = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const EYE = 0.52;
 
 // ---------- procedural textures ----------
@@ -130,7 +132,7 @@ export class Renderer {
     this.level = new THREE.Group(); this.scene.add(this.level);
     this.entities = new THREE.Group(); this.scene.add(this.entities);
     this.fxGroup = new THREE.Group(); this.scene.add(this.fxGroup);
-    this.monsterObjs = new Map(); this.playerObjs = new Map(); this.itemObjs = new Map();
+    this.monsterObjs = new Map(); this.dyingObjs = []; this.playerObjs = new Map(); this.itemObjs = new Map();
     this.fxList = [];
     this.torches = [];
     this.cam = { x: 0, y: 0, yaw: 0, tx: 0, ty: 0, tyaw: 0, bob: 0, shake: 0 };
@@ -165,6 +167,8 @@ export class Renderer {
     for (const t of this.torches) this.scene.remove(t.light);
     this.torches = [];
     for (const m of [this.monsterObjs, this.playerObjs, this.itemObjs]) { for (const o of m.values()) this.entities.remove(o); m.clear(); }
+    for (const o of this.dyingObjs) this.entities.remove(o);
+    this.dyingObjs = [];
     const { w, h, cells } = map;
     const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? '#' : cells[y][x]);
     const open = (c) => c !== '#';
@@ -299,28 +303,33 @@ export class Renderer {
       if (!o) {
         o = new THREE.Group();
         const aff = m.e ? AFFIXES[m.e] : null;
-        const scale = def.boss ? 1.2 : aff ? 0.88 : 0.72;
-        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(def.icon, def.boss ? '#ff2244' : aff ? aff.color : '#aa2200'), transparent: true }));
-        spr.scale.set(scale, scale, 1); spr.position.y = def.boss ? 0.6 : 0.38;
-        const bar = hpBar(); bar.position.y = def.boss ? 1.25 : 0.82;
-        const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.25, 16), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.45, depthWrite: false }));
+        const model = buildMonsterModel(m.t);
+        if (aff) model.scale.multiplyScalar(1.15);
+        const top = Math.min(1.12, 0.82 * model.scale.y + 0.08);
+        const bar = hpBar(); bar.position.y = top;
+        const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.25 * Math.min(2, model.scale.x), 16), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.45, depthWrite: false }));
         shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.01;
-        o.add(spr, bar, shadow);
+        o.add(model, bar, shadow);
         if (aff) {
-          const label = textSprite(`${aff.icon} ${aff.name}`, aff.color, 36, 0.5); label.position.y = 1.0; o.add(label);
+          const label = textSprite(`${aff.icon} ${aff.name}`, aff.color, 36, 0.5); label.position.y = top + 0.12; o.add(label);
           const glow = new THREE.PointLight(new THREE.Color(aff.color), 1.6, 2.5, 1.5); glow.position.y = 0.4; o.add(glow);
           const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.33, 32), new THREE.MeshBasicMaterial({ color: aff.color, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
           ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; o.add(ring);
         }
-        o.userData = { spr, bar, lastHp: -1, flash: 0, x: m.x, y: m.y, baseY: spr.position.y, boss: def.boss };
+        o.userData = { model, bar, lastHp: -1, flash: 0, x: m.x, y: m.y, atk: 1, yaw: Math.atan2(DIRV[m.f][0], DIRV[m.f][1]), boss: def.boss, type: m.t };
+        model.rotation.y = o.userData.yaw;
         o.position.set(m.x, 0, m.y);
         this.entities.add(o); this.monsterObjs.set(m.id, o);
       }
       const u = o.userData;
-      u.x = m.x; u.y = m.y; u.stun = m.s;
+      u.x = m.x; u.y = m.y; u.stun = m.s; u.f = m.f;
       if (u.lastHp !== m.hp) { if (u.lastHp > m.hp) u.flash = 1; u.lastHp = m.hp; u.bar.userData.set(m.hp / m.mhp, def.boss ? '#ff2a6a' : m.e ? AFFIXES[m.e].color : '#e33'); }
     }
-    for (const [id, o] of this.monsterObjs) if (!seen.has(id)) { this.entities.remove(o); this.monsterObjs.delete(id); }
+    for (const [id, o] of this.monsterObjs) if (!seen.has(id)) {
+      this.monsterObjs.delete(id);
+      o.remove(o.userData.bar);
+      o.userData.dying = 0; this.dyingObjs.push(o);
+    }
   }
 
   syncPlayers(list, selfId) {
@@ -447,7 +456,14 @@ export class Renderer {
   playFx(ev, selfId) {
     const C = { bolt: 0xb38cff, fire: 0xff6a1a, arrow: 0xd8ffb0, mbolt: 0xff3355 };
     switch (ev.k) {
-      case 'bolt': case 'arrow': case 'mbolt': this.projectile({ x: ev.x, y: ev.y }, { x: ev.tx, y: ev.ty }, C[ev.k], ev.k === 'arrow' ? 0.035 : 0.06); break;
+      case 'mbolt': {
+        const mo = this.monsterObjs.get(ev.mid); if (mo) mo.userData.atk = 0;
+        const ty = mo?.userData.type;
+        const col = ty === 'archer' ? 0xd8c8a0 : ty === 'mage' ? 0x4aa8ff : ty === 'cultist' || ty === 'tyrant' ? 0xff6a1a : ty === 'wraith' ? 0x8af0ff : C.mbolt;
+        this.projectile({ x: ev.x, y: ev.y }, { x: ev.tx, y: ev.ty }, col, ty === 'archer' ? 0.03 : 0.06);
+        break;
+      }
+      case 'bolt': case 'arrow': this.projectile({ x: ev.x, y: ev.y }, { x: ev.tx, y: ev.ty }, C[ev.k], ev.k === 'arrow' ? 0.035 : 0.06); break;
       case 'fire': this.projectile({ x: ev.x, y: ev.y }, { x: ev.tx, y: ev.ty }, C.fire, 0.09); setTimeout(() => { this.burst(ev.tx, ev.ty, 0xff5511, 1.4, 0.6); this.sparkle(ev.tx, ev.ty, 0xffaa33, 40); }, 200); break;
       case 'frost': this.ringWave(ev.x, ev.y, 0x88ddff, ev.r); this.sparkle(ev.x, ev.y, 0xcff4ff, 50); break;
       case 'holy': this.ringWave(ev.x, ev.y, 0xfff0a0, ev.r); this.burst(ev.x, ev.y, 0xffee88, 1.2); break;
@@ -471,7 +487,7 @@ export class Renderer {
       case 'warn': this.ringWave(ev.x, ev.y, 0xff3300, ev.r, 1.5); this.sparkle(ev.x, ev.y, 0xff6600, 40, 1.5); break;
       case 'bossnova': this.ringWave(ev.x, ev.y, 0xff7a1a, ev.r, 0.7); this.burst(ev.x, ev.y, 0xff5500, ev.r + 0.6, 0.7); this.sparkle(ev.x, ev.y, 0xffbb33, 80, 1.1); this.shake(0.1); break;
       case 'summon': this.burst(ev.x, ev.y, 0x6a2aff, 0.45, 0.5); this.sparkle(ev.x, ev.y, 0xaa77ff, 24, 0.8); break;
-      case 'claw': this.burst(ev.tx, ev.ty, 0xff2222, 0.25, 0.25); break;
+      case 'claw': { const mo = this.monsterObjs.get(ev.mid); if (mo) mo.userData.atk = 0; this.burst(ev.tx, ev.ty, 0xff2222, 0.25, 0.25); break; }
       case 'dmg': {
         this.floatText(ev.x, ev.y, ev.crit ? `${ev.v}!` : `${ev.v}`, ev.crit ? '#ffd23f' : '#ffffff', ev.crit);
         const o = this.monsterObjs.get(ev.mid); if (o) o.userData.flash = 1;
@@ -515,10 +531,25 @@ export class Renderer {
     for (const o of this.monsterObjs.values()) {
       const u = o.userData;
       o.position.x += (u.x - o.position.x) * k; o.position.z += (u.y - o.position.z) * k;
-      u.spr.position.y = u.baseY + Math.sin(t * 3 + o.id) * 0.03;
+      const gap = Math.hypot(u.x - o.position.x, u.y - o.position.z);
+      u.move = Math.min(1, (u.move || 0) * 0.85 + (gap > 0.03 ? 0.3 : 0));
+      u.atk = Math.min(1, u.atk + dt * 2.6);
+      if (u.f !== undefined && u.f >= 0) {
+        const target = Math.atan2(DIRV[u.f][0], DIRV[u.f][1]);
+        let d = target - u.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+        u.yaw += d * Math.min(1, dt * 10); u.model.rotation.y = u.yaw;
+      }
       u.flash = Math.max(0, u.flash - dt * 4);
-      u.spr.material.color.setRGB(1, 1 - u.flash * 0.7, 1 - u.flash * 0.7);
-      if (u.stun) u.spr.material.color.setRGB(0.6, 0.85, 1);
+      if (!u.stun) u.model.userData.anim(t + o.id * 0.37, { move: u.move, atk: u.atk });
+      tintModel(u.model, u.flash, u.stun);
+    }
+    for (let i = this.dyingObjs.length - 1; i >= 0; i--) {
+      const o = this.dyingObjs[i], u = o.userData;
+      u.dying += dt * 1.4;
+      u.model.rotation.x = -Math.min(1, u.dying * 1.6) * Math.PI / 2 * 0.95;
+      o.position.y = -Math.max(0, u.dying - 0.6) * 0.4;
+      tintModel(u.model, Math.max(0, 0.6 - u.dying), false, Math.max(0, 1 - Math.max(0, u.dying - 0.5) * 2));
+      if (u.dying >= 1) { this.entities.remove(o); this.dyingObjs.splice(i, 1); }
     }
     for (const o of this.playerObjs.values()) {
       const u = o.userData;
