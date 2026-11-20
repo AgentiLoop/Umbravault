@@ -1,5 +1,5 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
-import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName, SHOP, MERCHANT_RANGE } from './data.js';
+import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, EMOTES } from './data.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 
@@ -20,7 +20,7 @@ const S = {
   cls: localStorage.getItem('uv.cls') || 'vanguard',
   ws: null, qws: null, id: null, code: null, map: null,
   me: { x: 0, y: 0, f: 1 }, players: [], monsters: [], items: [],
-  lastLocalMove: 0, explored: null, lastHp: null,
+  lastLocalMove: 0, explored: null, lastHp: null, pings: [],
 };
 const renderer = new Renderer($('#view'));
 const sfx = new Sound();
@@ -182,7 +182,12 @@ function onState(m) {
       S.map.cells[ev.y] = row.slice(0, ev.x) + ev.c + row.slice(ev.x + 1);
       renderer.setCell(ev.x, ev.y, ev.c);
     } else if (ev.e === 'log') { addLog(ev.text, ev.kind); if (ev.kind === 'boss' && ev.text.includes('awakens')) sfx.bossRoar(); }
-    else if (ev.e === 'chat') sfx.chat(), addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
+    else if (ev.e === 'chat') {
+      sfx.chat();
+      addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
+      if (ev.pid !== S.id) renderer.say(ev.pid, ev.text); else toast(esc(ev.text), 1200);
+      if (ev.emote !== undefined) S.pings.push({ x: ev.x, y: ev.y, color: CLASSES[ev.cls]?.color || '#fff', until: performance.now() + 3000 });
+    }
     if (ev.e === 'fx' && ev.k === 'levelup' && ev.pid === S.id) toast('Level up!');
   }
   updateHud(m.depth);
@@ -238,6 +243,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyG') send({ t: 'descend' });
   else if (e.code === 'KeyR') send({ t: 'revive' });
   else if (e.code === 'KeyB') toggleShop();
+  else if (/^Digit[5-9]$/.test(e.code)) send({ t: 'emote', i: +e.code.slice(5) - 5 });
   else if (e.code === 'Escape') toggleShop(false);
   else if (e.code === 'KeyM') { sfx.toggleMute(); muteLabel(); }
 });
@@ -297,6 +303,8 @@ function drawShop() {
   document.querySelectorAll('.shop-item').forEach((b) => b.onclick = () => send({ t: 'buy', item: b.dataset.id }));
 }
 $('#shop-close').onclick = () => toggleShop(false);
+$('#emotes').innerHTML = EMOTES.map((em, i) => `<button data-i="${i}" title="${em.text} (${i + 5})">${em.icon}</button>`).join('');
+document.querySelectorAll('#emotes button').forEach((b) => b.onclick = () => send({ t: 'emote', i: +b.dataset.i }));
 function updateHud(depth) {
   const me = S.self;
   if (!me) return;
@@ -390,6 +398,15 @@ function drawMinimap() {
   for (const p of S.players) {
     if (p.id === S.id) continue;
     ctx.fillStyle = CLASSES[p.c].color; ctx.beginPath(); ctx.arc(p.x * sz + sz / 2, p.y * sz + sz / 2, sz / 2.2, 0, 7); ctx.fill();
+  }
+  // emote pings
+  const pt = performance.now();
+  S.pings = S.pings.filter((p) => p.until > pt);
+  for (const p of S.pings) {
+    const k = ((p.until - pt) % 1000) / 1000;
+    ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.globalAlpha = k;
+    ctx.beginPath(); ctx.arc(p.x * sz + sz / 2, p.y * sz + sz / 2, sz * (2.5 - 2 * k), 0, 7); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   // self arrow
   ctx.save(); ctx.translate(S.me.x * sz + sz / 2, S.me.y * sz + sz / 2); ctx.rotate(S.me.f * Math.PI / 2);

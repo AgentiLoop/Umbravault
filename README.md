@@ -22,7 +22,8 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 | B | trade with the Lantern Merchant (stand near the entry hall) |
 | R | revive a fallen ally next to you (2.5s channel, 1s for Lightwardens) |
 | M | mute / unmute sound |
-| Enter | chat |
+| 5–9 | emotes: 👋 hail, 🆘 help, ⚠️ danger, ➡️ follow, 🎉 victory (bubble over your head + minimap ping) |
+| Enter | chat (appears as a speech bubble over your hero) |
 
 ### Callings (classes)
 Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Nightblade 🗡️ (rogue) and Thornwarden 🏹 (archer).

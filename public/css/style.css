@@ -109,3 +109,7 @@ h2 { font-family: Cinzel, serif; color: var(--gold); margin: 6px 0; }
 .bossbar .track { position: relative; height: 14px; margin-top: 4px; border-radius: 7px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,80,120,0.6); overflow: hidden; }
 .bossbar .fill { height: 100%; background: linear-gradient(90deg, #6a0018, #ff2a6a); transition: width 0.2s; }
 .bossbar span { position: absolute; inset: 0; font-size: 10px; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 600; }
+.emotes { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 4px; }
+.emotes button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); font-size: 17px; cursor: pointer; padding: 0; }
+.emotes button:hover { border-color: var(--gold); }
+@media (pointer: coarse) { .emotes { bottom: auto; top: 50%; flex-direction: column; } }

@@ -98,6 +98,14 @@ export const MERCHANT_RANGE = 2;
 export const BOSS_ORDER = ['boss', 'matriarch', 'tyrant'];
 export const bossForDepth = (d) => BOSS_ORDER[(Math.floor(d / 3) - 1) % BOSS_ORDER.length];
 
+// quick emotes (keys 5-9): shown as a bubble over the hero and pinged on the minimap
+export const EMOTES = [
+  { icon: '👋', text: 'Hail, friends!' },
+  { icon: '🆘', text: 'Help me!' },
+  { icon: '⚠️', text: 'Danger ahead!' },
+  { icon: '➡️', text: 'Follow me!' },
+  { icon: '🎉', text: 'Victory!' },
+];
 export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
 
 export function mulberry32(seed) {

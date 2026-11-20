@@ -1,6 +1,6 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
 import { validHeroKey } from './hero.js';
-import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, bossForDepth, rollGear, gearScore, RARITY } from '../public/js/data.js';
+import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, bossForDepth, EMOTES, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
@@ -240,7 +240,16 @@ export class GameRoom {
       case 'buy': this.buy(p, String(m.item)); break;
       case 'chat': {
         const text = String(m.text || '').slice(0, 140).trim();
-        if (text) this.events.push({ e: 'chat', from: p.name, cls: p.cls, text });
+        if (!text || now - (p.lastChat || 0) < 500) break;
+        p.lastChat = now;
+        this.events.push({ e: 'chat', pid: p.id, from: p.name, cls: p.cls, text });
+        break;
+      }
+      case 'emote': {
+        const em = EMOTES[m.i | 0];
+        if (!em || now - (p.lastChat || 0) < 700) break;
+        p.lastChat = now;
+        this.events.push({ e: 'chat', pid: p.id, from: p.name, cls: p.cls, text: `${em.icon} ${em.text}`, emote: m.i | 0, x: p.x, y: p.y });
         break;
       }
     }

@@ -336,7 +336,7 @@ export class Renderer {
         ring.rotation.x = -Math.PI / 2; ring.position.y = 0.015;
         const light = new THREE.PointLight(new THREE.Color(def.color), 0.8, 3, 1.5); light.position.y = 0.5;
         o.add(spr, label, bar, ring, light);
-        o.userData = { spr, bar, lastHp: -1, x: p.x, y: p.y };
+        o.userData = { spr, bar, lastHp: -1, x: p.x, y: p.y, bubble: null };
         o.position.set(p.x, 0, p.y);
         this.entities.add(o); this.playerObjs.set(p.id, o);
       }
@@ -347,6 +347,18 @@ export class Renderer {
     for (const [id, o] of this.playerObjs) if (!seen.has(id)) { this.entities.remove(o); this.playerObjs.delete(id); }
   }
 
+  // speech bubble over another hero's head for a few seconds
+  say(pid, text) {
+    const o = this.playerObjs.get(pid);
+    if (!o) return;
+    const u = o.userData;
+    if (u.bubble) { o.remove(u.bubble); u.bubble.material.map.dispose(); }
+    const short = text.length > 42 ? text.slice(0, 40) + '…' : text;
+    const sp = textSprite(short, '#fff6dc', 34, 0.5);
+    sp.position.y = 1.08;
+    sp.userData.until = this.clock.elapsedTime + 4.5;
+    o.add(sp); u.bubble = sp;
+  }
   syncItems(list) {
     const seen = new Set();
     for (const it of list) {
@@ -506,6 +518,11 @@ export class Renderer {
       o.position.x += (u.x - o.position.x) * k; o.position.z += (u.y - o.position.z) * k;
       u.spr.material.opacity = u.dead ? 0.25 : 1;
       u.spr.position.y = 0.36 + Math.sin(t * 2 + o.id) * 0.02;
+      if (u.bubble) {
+        const left = u.bubble.userData.until - t;
+        u.bubble.material.opacity = Math.min(1, left);
+        if (left <= 0) { o.remove(u.bubble); u.bubble.material.map.dispose(); u.bubble = null; }
+      }
     }
     if (this.merchant) this.merchant.position.y = Math.sin(t * 1.3) * 0.04;
     for (const o of this.itemObjs.values()) { o.rotation.y = t * 1.5; o.position.y = Math.sin(t * 2 + o.id) * 0.02 + 0.02; }

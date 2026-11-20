@@ -68,6 +68,10 @@ check(!!fx, 'ability cast emits a bolt effect');
 pb.send(JSON.stringify({ t: 'chat', text: 'hello vault' }));
 const chat = await waitFor(pa, (m) => m.t === 's' && m.ev.some((e) => e.e === 'chat' && e.text === 'hello vault'));
 check(!!chat, 'chat relayed to other players');
+await sleep(800);
+pb.send(JSON.stringify({ t: 'emote', i: 2 }));
+const emo = await waitFor(pa, (m) => m.t === 's' && m.ev.some((e) => e.e === 'chat' && e.emote === 2 && e.pid && typeof e.x === 'number'));
+check(!!emo, 'emote relayed with sender id and position');
 
 // private room join by code
 const { code: priv } = await (await fetch(`${BASE}/api/create`)).json();
