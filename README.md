@@ -28,6 +28,10 @@ Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Ni
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
 Every third depth holds a boss, **The Hollow King**.
 
+### Doors & traps
+Iron-bound doors guard many room entrances. Walk into a door to raise it, and it stays open for the whole party. Monsters can't open doors or see through closed ones.
+Hidden spike traps lie in rooms and corridors. Stepping on one costs about 15% of max HP and leaves spikes showing. **Nightblades** sense armed traps within 2 paces and disarm them automatically.
+
 ### Gear
 Monsters and dungeon rooms drop gear. Each piece glows in its rarity color: **Worn** (grey), **Runed** (blue), **Mythic** (purple) or **Lantern-Forged** (orange).
 There are three slots: Weapon (+% damage), Armor (+armor, +HP) and Charm (+MP, +% damage).

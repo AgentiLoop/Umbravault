@@ -171,6 +171,10 @@ function onState(m) {
       renderer.playFx(ev, S.id);
       const dist = Math.max(Math.abs(ev.x - S.me.x), Math.abs(ev.y - S.me.y));
       if (dist <= 10) sfx.play({ ...ev, near: dist <= 5 }, S.id);
+    } else if (ev.e === 'cell') {
+      const row = S.map.cells[ev.y];
+      S.map.cells[ev.y] = row.slice(0, ev.x) + ev.c + row.slice(ev.x + 1);
+      renderer.setCell(ev.x, ev.y, ev.c);
     } else if (ev.e === 'log') { addLog(ev.text, ev.kind); if (ev.kind === 'boss' && ev.text.includes('rises')) sfx.bossRoar(); }
     else if (ev.e === 'chat') sfx.chat(), addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
     if (ev.e === 'fx' && ev.k === 'levelup' && ev.pid === S.id) toast('Level up!');
@@ -186,6 +190,7 @@ function tryMove(rel) {
   const d = (S.me.f + rel) % 4;
   const [dx, dy] = DIRS[d];
   const nx = S.me.x + dx, ny = S.me.y + dy;
+  if (S.map.cells[ny]?.[nx] === '+') { send({ t: 'move', d, f: S.me.f }); return; }
   if (!isWalkable(S.map.cells[ny]?.[nx]) || S.monsters.some((mo) => mo.x === nx && mo.y === ny)) { renderer.shake(0.025); sfx.bump(); return; }
   sfx.step();
   S.me.x = nx; S.me.y = ny; S.lastLocalMove = Date.now();
@@ -343,7 +348,7 @@ function drawMinimap() {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (!S.explored[y * w + x]) continue;
     const c = cells[y][x];
-    ctx.fillStyle = c === '#' ? '#3a3040' : c === 'P' ? '#5a4a60' : c === '>' ? '#55ccff' : '#1d1822';
+    ctx.fillStyle = c === '#' ? '#3a3040' : c === 'P' ? '#5a4a60' : c === '+' ? '#8a5a2a' : c === '/' ? '#4a3220' : c === 'x' ? '#7a2020' : c === '>' ? '#55ccff' : '#1d1822';
     ctx.fillRect(x * sz, y * sz, sz, sz);
   }
   for (const it of S.items) if (S.explored[it.y * w + it.x]) { ctx.fillStyle = it.k === 'gold' ? '#ffcc33' : it.k === 'gear' ? RARITY[it.r].color : '#ff3355'; ctx.fillRect(it.x * sz + 2, it.y * sz + 2, sz - 4, sz - 4); }

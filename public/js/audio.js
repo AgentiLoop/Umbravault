@@ -99,6 +99,9 @@ export class Sound {
       case 'pickup': this.tone(1400, 0.08, 'square', 0.06); this.tone(2100, 0.15, 'square', 0.05, null, 0.06); break;
       case 'dmg': this.noise(0.1, ev.crit ? 0.4 : 0.25, 'lowpass', ev.crit ? 2500 : 1400); if (ev.crit) this.tone(180, 0.15, 'square', 0.12, 90); break;
       case 'death': this.tone(300, 0.5, 'sawtooth', 0.12 * v, 60); this.noise(0.4, 0.2 * v, 'lowpass', 900, 100); break;
+      case 'door': this.noise(0.9, 0.18 * v, 'lowpass', 300, 900); for (let i = 0; i < 6; i++) this.tone(180 + Math.random() * 60, 0.05, 'square', 0.04 * v, null, i * 0.13); break;
+      case 'trap': this.tone(1500, 0.06, 'square', 0.1 * v); this.noise(0.25, 0.35 * v, 'highpass', 2500, 800, 0.03); break;
+      case 'disarm': this.tone(1200, 0.06, 'square', 0.05); this.tone(900, 0.08, 'square', 0.05, null, 0.08); break;
       case 'claw': this.noise(0.12, 0.2 * v, 'bandpass', 1800, 500); break;
       case 'mbolt': this.tone(300, 0.3, 'sawtooth', 0.1 * v, 120); break;
       case 'num': if (!ev.heal && ev.pid === selfId) { this.tone(110, 0.2, 'square', 0.15, 55); this.noise(0.15, 0.2, 'lowpass', 700); } break;

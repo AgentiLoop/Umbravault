@@ -123,10 +123,30 @@ export function generateDungeon(seed, depth) {
       for (const [px, py] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) g[py][px] = 'P';
     }
   }
+  // doors: corridor cells just outside a room, framed by walls on both sides
+  const isRoomCell = (x, y) => rooms.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+  for (const r of rooms) {
+    const edge = [];
+    for (let x = r.x; x < r.x + r.w; x++) edge.push([x, r.y - 1, 1], [x, r.y + r.h, 1]);
+    for (let y = r.y; y < r.y + r.h; y++) edge.push([r.x - 1, y, 0], [r.x + r.w, y, 0]);
+    for (const [x, y, horiz] of edge) {
+      if (g[y]?.[x] !== '.' || isRoomCell(x, y)) continue;
+      const framed = horiz ? g[y][x - 1] === '#' && g[y][x + 1] === '#' : g[y - 1]?.[x] === '#' && g[y + 1]?.[x] === '#';
+      if (framed && rnd() < 0.55) g[y][x] = '+';
+    }
+  }
+  // hidden spike traps, never in the start room or on the stairs
+  const nearStart = (x, y) => x >= start.x - 1 && x <= start.x + start.w && y >= start.y - 1 && y <= start.y + start.h;
+  for (let n = 0, tries = 0; n < 3 + depth && tries < 400; tries++) {
+    const x = ri(1, w - 2), y = ri(1, h - 2);
+    if (g[y][x] !== '.' || nearStart(x, y)) continue;
+    g[y][x] = '^'; n++;
+  }
   return { w, h, depth, cells: g.map((row) => row.join('')), rooms, start: { x: start.cx, y: start.cy }, stairs: { x: end.cx, y: end.cy }, startRoom: start, endRoom: end };
 }
 
-export const isWalkable = (ch) => ch === '.' || ch === '>';
+// '+' closed door, '/' open door, '^' hidden armed trap (sent to clients as '.'), 'x' sprung/disarmed trap
+export const isWalkable = (ch) => ch === '.' || ch === '>' || ch === '/' || ch === '^' || ch === 'x';
 // ---------- gear ----------
 export const RARITY = [
   { name: 'Worn', color: '#c8c8c8', mult: 1 },

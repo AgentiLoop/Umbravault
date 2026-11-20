@@ -188,6 +188,9 @@ export class Renderer {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (at(x, y) === 'P') {
       const p = new THREE.Mesh(pillarGeo, wallMat); p.position.set(x, WALL_H / 2, y); this.level.add(p);
     }
+    // doors and visible (sprung/disarmed) traps
+    this.doorObjs = new Map(); this.trapObjs = new Map();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) this.setCell(x, y, at(x, y), true);
     // stairway portal
     const s = map.stairs;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: 0x66e0ff }));
@@ -220,6 +223,42 @@ export class Renderer {
     }
   }
 
+  setCell(x, y, c, instant = false) {
+    const key = y * this.map.w + x;
+    if (c === '+' || c === '/') {
+      let d = this.doorObjs.get(key);
+      if (!d) {
+        const cells = this.map.cells;
+        const spanX = cells[y]?.[x - 1] === '#' && cells[y]?.[x + 1] === '#';
+        if (!this.doorMat) {
+          this.doorMat = new THREE.MeshStandardMaterial({ map: canvasTex(128, (ctx, s) => {
+            ctx.fillStyle = '#3b2412'; ctx.fillRect(0, 0, s, s);
+            for (let i = 0; i < 5; i++) { const v = 50 + Math.random() * 25; ctx.fillStyle = `rgb(${v + 20},${v},${v - 20})`; ctx.fillRect(i * s / 5 + 2, 0, s / 5 - 4, s); }
+            ctx.fillStyle = '#2a2a30'; for (const yy of [0.18, 0.78]) ctx.fillRect(0, yy * s, s, 10);
+            ctx.fillStyle = '#8a8a90'; for (const yy of [0.18, 0.78]) for (let i = 0; i < 6; i++) ctx.fillRect(8 + i * 22, yy * s + 3, 4, 4);
+          }), roughness: 0.8, metalness: 0.15 });
+        }
+        d = new THREE.Mesh(new THREE.BoxGeometry(spanX ? 1 : 0.12, WALL_H, spanX ? 0.12 : 1), this.doorMat);
+        d.position.set(x, WALL_H / 2, y);
+        d.userData = { open: 0, target: 0 };
+        this.level.add(d); this.doorObjs.set(key, d);
+      }
+      d.userData.target = c === '/' ? 1 : 0;
+      if (instant) d.userData.open = d.userData.target;
+    } else if (c === 'x' && !this.trapObjs.has(key)) {
+      const g = new THREE.Group();
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.8), new THREE.MeshStandardMaterial({ color: 0x3a3330, metalness: 0.6, roughness: 0.5 }));
+      plate.position.y = 0.01; g.add(plate);
+      const spikeMat = new THREE.MeshStandardMaterial({ color: 0x9a9aa6, metalness: 0.9, roughness: 0.3, emissive: 0x220000 });
+      for (let i = 0; i < 9; i++) {
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.22, 6), spikeMat);
+        sp.position.set(((i % 3) - 1) * 0.24, 0.11, (Math.floor(i / 3) - 1) * 0.24); g.add(sp);
+      }
+      g.position.set(x, instant ? 0 : -0.2, y);
+      g.userData = { rise: instant ? 1 : 0 };
+      this.level.add(g); this.trapObjs.set(key, g);
+    }
+  }
   setCamera(x, y, f, snap = false) {
     this.cam.tx = x; this.cam.ty = y;
     // continuous yaw target so turns animate the short way round
@@ -387,6 +426,8 @@ export class Renderer {
       case 'revive': this.ringWave(ev.x, ev.y, 0xfff4b0, 1.2, 0.9); this.burst(ev.x, ev.y, 0xffffcc, 0.9, 0.7); this.sparkle(ev.x, ev.y, 0xffeeaa, 60, 1.3); break;
       case 'pdeath': this.burst(ev.x, ev.y, 0x6600aa, 0.8, 0.8); break;
       case 'swing': if (ev.pid === selfId) this.swingFlash(); break;
+      case 'trap': this.burst(ev.x, ev.y, 0xaa0000, 0.4, 0.35); this.sparkle(ev.x, ev.y, 0xff3333, 30, 0.7); if (Math.abs(ev.x - this.cam.tx) + Math.abs(ev.y - this.cam.ty) < 0.5) this.shake(0.12); break;
+      case 'disarm': this.sparkle(ev.x, ev.y, 0x5fd38d, 24, 0.8); break;
       case 'claw': this.burst(ev.tx, ev.ty, 0xff2222, 0.25, 0.25); break;
       case 'dmg': {
         this.floatText(ev.x, ev.y, ev.crit ? `${ev.v}!` : `${ev.v}`, ev.crit ? '#ffd23f' : '#ffffff', ev.crit);
@@ -418,6 +459,12 @@ export class Renderer {
     this.camera.rotation.set(-0.02 + c.swing * 0.05, c.yaw + c.swing * 0.08, 0, 'YXZ');
     this.lantern.intensity = 7 + Math.sin(t * 9) * 0.15 + Math.sin(t * 23) * 0.1;
     for (const tr of this.torches) { const f = Math.sin(t * 11 + tr.seed) * 0.25 + Math.sin(t * 27 + tr.seed * 2) * 0.15; tr.light.intensity = 4 + f * 2; tr.flame.scale.setScalar(1 + f * 0.4); }
+    for (const d of this.doorObjs.values()) {
+      const u = d.userData;
+      u.open += Math.sign(u.target - u.open) * Math.min(Math.abs(u.target - u.open), dt * 1.8);
+      d.position.y = WALL_H / 2 + u.open * (WALL_H - 0.08);
+    }
+    for (const g of this.trapObjs.values()) if (g.userData.rise < 1) { g.userData.rise = Math.min(1, g.userData.rise + dt * 8); g.position.y = -0.2 + 0.2 * g.userData.rise; }
     if (this.portal) { this.portal.ring.rotation.z = t; this.portal.beam.material.opacity = 0.14 + Math.sin(t * 3) * 0.06; }
     this.dust.position.set(c.x, 0, c.y);
     this.dust.rotation.y = t * 0.02;

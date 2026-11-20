@@ -152,7 +152,8 @@ export class GameRoom {
     return p;
   }
 
-  mapPayload() { return { w: this.map.w, h: this.map.h, depth: this.depth, cells: this.map.cells, start: this.map.start, stairs: this.map.stairs }; }
+  // current grid (opened doors, sprung traps) with armed traps hidden from clients
+  mapPayload() { return { w: this.map.w, h: this.map.h, depth: this.depth, cells: this.grid.map((r) => r.join('').replace(/\^/g, '.')), start: this.map.start, stairs: this.map.stairs }; }
 
   reportToLobby() {
     if (!this.isPublic || !this.env.LOBBY) return;
@@ -176,9 +177,16 @@ export class GameRoom {
         if (Number.isInteger(m.f) && m.f >= 0 && m.f < 4) p.f = m.f;
         const [dx, dy] = DIRS[m.d];
         const nx = p.x + dx, ny = p.y + dy;
+        if (this.grid[ny]?.[nx] === '+') {
+          p.lastMove = now;
+          this.setCell(nx, ny, '/');
+          this.fx({ k: 'door', x: nx, y: ny });
+          break;
+        }
         if (!isWalkable(this.grid[ny]?.[nx]) || this.monsterAt(nx, ny)) { this.send(p.ws, { t: 'bump', x: p.x, y: p.y }); break; }
         p.x = nx; p.y = ny; p.lastMove = now; p.rev = null;
-        this.pickup(p);
+        if (this.grid[ny][nx] === '^') this.springTrap(p, now);
+        if (!p.dead) this.pickup(p);
         break;
       }
       case 'act': this.useAbility(p, m.i | 0, now); break;
@@ -241,6 +249,38 @@ export class GameRoom {
       this.log(`${p.name} pulls ${t.name} back from the Veil!`, 'heal');
       this.fx({ k: 'revive', x: t.x, y: t.y, pid: t.id });
       this.gainXp(p, 10 * this.depth);
+    }
+  }
+  setCell(x, y, c) {
+    this.grid[y][x] = c;
+    this.events.push({ e: 'cell', x, y, c });
+  }
+  springTrap(p, now) {
+    this.setCell(p.x, p.y, 'x');
+    const dmg = Math.max(1, Math.round(p.mhp * 0.15 + this.depth * 4) - p.armor);
+    p.hp -= dmg;
+    if (p.rev) p.rev = null;
+    this.fx({ k: 'trap', x: p.x, y: p.y });
+    this.fx({ k: 'num', x: p.x, y: p.y, v: dmg, pid: p.id });
+    this.log(`${p.name} triggers a spike trap!`, 'death');
+    if (p.hp <= 0) this.killPlayer(p, 'a spike trap', now);
+  }
+  killPlayer(p, by, now) {
+    p.hp = 0; p.dead = true; p.respawnAt = now + RESPAWN_MS; p.vote = false; p.rev = null;
+    const lost = Math.floor(p.gold * 0.1); p.gold -= lost;
+    this.log(`${p.name} was slain by ${by}!${lost ? ` (${lost} gold lost)` : ''}`, 'death');
+    this.fx({ k: 'pdeath', x: p.x, y: p.y, pid: p.id });
+  }
+  // Nightblades sense armed traps within 2 paces and disarm them
+  senseTraps(players) {
+    for (const p of players) {
+      if (p.cls !== 'nightblade' || p.dead || p.goneAt) continue;
+      for (let y = p.y - 2; y <= p.y + 2; y++) for (let x = p.x - 2; x <= p.x + 2; x++) {
+        if (this.grid[y]?.[x] !== '^') continue;
+        this.setCell(x, y, 'x');
+        this.fx({ k: 'disarm', x, y });
+        this.log(`${p.name} spots and disarms a spike trap.`, 'loot');
+      }
     }
   }
   pickup(p) {
@@ -376,7 +416,7 @@ export class GameRoom {
       if (e2 <= dx) { err += dx; y0 += sy; }
       if (x0 === b.x && y0 === b.y) break;
       const c = this.grid[y0]?.[x0];
-      if (c === '#' || c === 'P') return false;
+      if (c === '#' || c === 'P' || c === '+') return false;
     }
     return true;
   }
@@ -409,6 +449,7 @@ export class GameRoom {
       for (const p of players) if (!p.dead) { p.mp = Math.min(p.mmp, p.mp + 2 + Math.floor(p.mmp / 50)); if (p.hp < p.mhp) p.hp = Math.min(p.mhp, p.hp + 1); }
     }
     this.tickRevives(now);
+    this.senseTraps(players);
     for (const p of players) if (p.dead && now >= p.respawnAt) {
       p.dead = false; this.placeAtStart(p, false); p.hp = Math.round(p.mhp * 0.6); p.mp = Math.round(p.mmp * 0.5);
       this.log(`${p.name} is drawn back from the Veil.`, 'respawn');
@@ -436,12 +477,7 @@ export class GameRoom {
         if (nearest.rev) { nearest.rev = null; this.send(nearest.ws, { t: 'toast', text: 'Revive interrupted!' }); }
         this.fx({ k: adjacent ? 'claw' : 'mbolt', x: mo.x, y: mo.y, tx: nearest.x, ty: nearest.y, mid: mo.id });
         this.fx({ k: 'num', x: nearest.x, y: nearest.y, v: dmg, pid: nearest.id });
-        if (nearest.hp <= 0) {
-          nearest.hp = 0; nearest.dead = true; nearest.respawnAt = now + RESPAWN_MS; nearest.vote = false;
-          const lost = Math.floor(nearest.gold * 0.1); nearest.gold -= lost;
-          this.log(`${nearest.name} was slain by a ${def.name}!${lost ? ` (${lost} gold lost)` : ''}`, 'death');
-          this.fx({ k: 'pdeath', x: nearest.x, y: nearest.y, pid: nearest.id });
-        }
+        if (nearest.hp <= 0) this.killPlayer(nearest, `a ${def.name}`, now);
         continue;
       }
       if (adjacent || now < mo.nextMove) continue;
