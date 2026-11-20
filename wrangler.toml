@@ -10,6 +10,14 @@ class_name = "Lobby"
 [[durable_objects.bindings]]
 name = "ROOMS"
 class_name = "GameRoom"
+[[durable_objects.bindings]]
+name = "HEROES"
+class_name = "HeroVault"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Lobby", "GameRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["HeroVault"]

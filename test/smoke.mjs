@@ -92,5 +92,20 @@ pb.msgs = [];
 const back = await waitFor(pb, (m) => m.t === 's' && m.p.filter((p) => p.n.startsWith('Alpha')).length === 1 && m.p.find((p) => p.n === 'Alpha')?.o === 0);
 check(!!back, 'resumed player online again with no duplicate');
 for (const w of [a, b, c, pa2, pb, pc]) w.close();
+// persistent hero: join with a hero key, leave, and the character is saved and restored in a new room
+const HERO = 'smoke-hero-' + Date.now();
+const h1 = await open(`${WS}/ws/${priv}`);
+h1.send(JSON.stringify({ t: 'join', name: 'Keeper', cls: 'lightwarden', token: 'tok-k1', hero: HERO }));
+await waitFor(h1, (m) => m.t === 'welcome');
+h1.close();
+let saved = {};
+for (let i = 0; i < 40 && !saved.lightwarden; i++) { await sleep(150); saved = await (await fetch(`${BASE}/api/heroes?key=${HERO}`)).json(); }
+check(saved.lightwarden && saved.lightwarden.lvl === 1 && saved.lightwarden.name === 'Keeper', 'hero saved on leave and listed by /api/heroes');
+const { code: priv2 } = await (await fetch(`${BASE}/api/create`)).json();
+const h2 = await open(`${WS}/ws/${priv2}`);
+h2.send(JSON.stringify({ t: 'join', name: 'Keeper', cls: 'lightwarden', token: 'tok-k2', hero: HERO }));
+const back2 = await waitFor(h2, (m) => m.t === 's' && m.ev.some((e) => e.e === 'log' && e.text.includes('returns to the vault')));
+check(!!back2, 'saved hero is restored when joining a new room');
+h2.close();
 console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

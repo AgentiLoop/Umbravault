@@ -32,6 +32,11 @@ Every third depth holds a boss, **The Hollow King**.
 Iron-bound doors guard many room entrances. Walk into a door to raise it, and it stays open for the whole party. Monsters can't open doors or see through closed ones.
 Hidden spike traps lie in rooms and corridors. Stepping on one costs about 15% of max HP and leaves spikes showing. **Nightblades** sense armed traps within 2 paces and disarm them automatically.
 
+### Saved heroes
+Your characters are saved on the server, one per calling, in a `HeroVault` Durable Object. They're keyed by a random hero ID stored in your browser's localStorage.
+The save holds level, XP, gold, potions, kills, equipped gear and deepest depth reached. It's written on level-up, on descending, when you disconnect, and every 30s.
+Choosing a calling you've played before restores that hero in any room, and the title screen shows its level and gold (⭐).
+
 ### Gear
 Monsters and dungeon rooms drop gear. Each piece glows in its rarity color: **Worn** (grey), **Runed** (blue), **Mythic** (purple) or **Lantern-Forged** (orange).
 There are three slots: Weapon (+% damage), Armor (+armor, +HP) and Charm (+MP, +% damage).
@@ -41,6 +46,7 @@ Deeper floors roll stronger gear, and the Hollow King always drops Mythic-or-bet
 ## Architecture
 - `src/worker.js`: routes `/api/quickmatch` (WS → Lobby DO), `/api/rooms`, `/api/create`, and `/ws/:code` (WS → GameRoom DO). It also serves static assets.
 - `src/lobby.js`: the singleton `Lobby` Durable Object, which holds the public room directory and the quick-match queue.
+- `src/hero.js`: the `HeroVault` Durable Object (one per hero key), which persists one saved character per class.
 - `src/room.js`: the `GameRoom` Durable Object. It runs the authoritative 10 Hz simulation: procedural dungeon, monster AI (BFS flow field), combat, loot, XP and levels, respawns, and descend votes.
 - `public/js/data.js`: classes, monsters and the dungeon generator, shared by the server and the client.
 - `public/js/render.js`: the Three.js renderer. It handles procedural textures, lantern/torch lighting, billboard sprites and spell effects.

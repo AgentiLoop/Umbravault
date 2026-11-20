@@ -9,6 +9,11 @@ const COMPASS = ['N', 'E', 'S', 'W'];
 // per-tab identity so a dropped connection or page reload resumes the same character
 const TOKEN = sessionStorage.getItem('uv.token') || (crypto.randomUUID?.() || String(Math.random()).slice(2) + Date.now());
 sessionStorage.setItem('uv.token', TOKEN);
+// persistent hero key (per browser) — saved characters are stored server-side under this key, one per class
+const HERO = localStorage.getItem('uv.hero') || (crypto.randomUUID?.() || `${Date.now()}-${String(Math.random()).slice(2)}`);
+localStorage.setItem('uv.hero', HERO);
+let heroes = {};
+fetch(`/api/heroes?key=${encodeURIComponent(HERO)}`).then((r) => r.json()).then((h) => { heroes = h || {}; drawClasses(); }).catch(() => {});
 
 const S = {
   name: localStorage.getItem('uv.name') || '',
@@ -29,6 +34,7 @@ function drawClasses() {
     <div class="cls ${k === S.cls ? 'sel' : ''}" data-k="${k}" style="--c:${c.color}">
       <div class="ic">${c.icon}</div><div class="nm">${c.name}</div>
       <div class="st">❤️ ${c.hp} · 🔷 ${c.mp}</div>
+      ${heroes[k] ? `<div class="saved">⭐ Lv ${heroes[k].lvl} · 💰 ${heroes[k].gold}</div>` : ''}
     </div>`).join('');
   const c = CLASSES[S.cls];
   $('#class-detail').innerHTML = `<b style="color:${c.color}">${c.name}</b> — ${c.desc}<br>` +
@@ -104,7 +110,7 @@ function connectRoom(code, isPublic, attempt = 0) {
   const ws = new WebSocket(`${wsBase}/ws/${code}${isPublic ? '?public=1' : ''}`);
   S.ws = ws; S.code = code;
   sessionStorage.setItem('uv.room', code); sessionStorage.setItem('uv.pub', isPublic ? '1' : '0');
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: S.name, cls: S.cls, token: TOKEN }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: S.name, cls: S.cls, token: TOKEN, hero: HERO }));
   ws.onmessage = (e) => { if (S.ws === ws) onMsg(JSON.parse(e.data), ws); };
   ws.onclose = (e) => {
     if (S.ws !== ws) return;

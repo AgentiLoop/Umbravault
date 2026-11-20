@@ -1,4 +1,5 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
+import { validHeroKey } from './hero.js';
 import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
@@ -90,8 +91,8 @@ export class GameRoom {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
-    let player = null;
-    server.addEventListener('message', (e) => {
+    let player = null, joining = false;
+    server.addEventListener('message', async (e) => {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (!player) {
@@ -100,7 +101,13 @@ export class GameRoom {
           const prev = token && [...this.players.values()].find((p) => p.token === token);
           if (prev) { player = this.resumePlayer(prev, server); return; }
           if (this.players.size >= MAX_PLAYERS) { this.send(server, { t: 'error', msg: 'Room is full (8/8).' }); server.close(1000); return; }
-          player = this.addPlayer(server, m, token);
+          if (joining) return;
+          joining = true;
+          const heroKey = validHeroKey(m.hero) ? m.hero : null;
+          const saved = heroKey ? await this.loadHero(heroKey, CLASSES[m.cls] ? m.cls : 'vanguard') : null;
+          if (this.players.size >= MAX_PLAYERS) { this.send(server, { t: 'error', msg: 'Room is full (8/8).' }); server.close(1000); return; }
+          player = this.addPlayer(server, m, token, heroKey, saved);
+          leaveIfClosed();
         }
         return;
       }
@@ -110,7 +117,11 @@ export class GameRoom {
       if (!player || !this.players.has(player.id) || player.ws !== server) return;
       player.ws = null; player.goneAt = Date.now(); player.vote = false;
       this.log(`${player.name} lost their lantern-link… (60s to return)`, 'death');
+      this.saveHero(player);
     };
+    let closed = false;
+    const leaveIfClosed = () => { if (closed) leave(); };
+    server.addEventListener('close', () => { closed = true; });
     server.addEventListener('close', leave);
     server.addEventListener('error', leave);
     return new Response(null, { status: 101, webSocket: client });
@@ -125,6 +136,7 @@ export class GameRoom {
   }
   dropExpired(now) {
     let changed = false;
+    for (const p of this.players.values()) if (!p.goneAt && now - p.lastSave > 30000) this.saveHero(p);
     for (const p of [...this.players.values()]) if (p.goneAt && now - p.goneAt > GRACE_MS) {
       this.players.delete(p.id); changed = true;
       this.log(`${p.name} has left the vault.`);
@@ -132,21 +144,46 @@ export class GameRoom {
     if (changed) this.reportToLobby();
     if (this.players.size === 0 && this.timer) { clearInterval(this.timer); this.timer = null; }
   }
-  addPlayer(ws, m, token) {
+  heroStub(key) { return this.env.HEROES ? this.env.HEROES.get(this.env.HEROES.idFromName(key)) : null; }
+  async loadHero(key, cls) {
+    try { const r = await this.heroStub(key)?.fetch(`https://hero/load?cls=${cls}`); return r ? await r.json() : null; } catch { return null; }
+  }
+  saveHero(p) {
+    const stub = p.heroKey && this.heroStub(p.heroKey);
+    if (!stub) return;
+    const h = { name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, kills: p.kills, gear: p.gear, best: this.depth };
+    const job = stub.fetch(`https://hero/save?cls=${p.cls}`, { method: 'POST', body: JSON.stringify(h) }).catch(() => {});
+    this.state.waitUntil?.(job);
+    p.lastSave = Date.now();
+  }
+  // restore level, gold and gear from a saved hero (HP/MP derived from level + gear)
+  applyHero(p, h) {
+    const def = CLASSES[p.cls];
+    p.lvl = Math.max(1, h.lvl | 0); p.xp = h.xp | 0; p.gold = h.gold | 0; p.potions = h.potions ?? 2; p.kills = h.kills | 0;
+    p.mhp = def.hp + def.hpPerLvl * (p.lvl - 1); p.mmp = def.mp + def.mpPerLvl * (p.lvl - 1); p.armor = def.armor;
+    for (const slot of ['weapon', 'armor', 'charm']) {
+      const g = h.gear?.[slot];
+      if (!g) continue;
+      p.gear[slot] = g; p.mhp += g.hp | 0; p.mmp += g.mp | 0; p.armor += g.arm | 0;
+    }
+    p.hp = p.mhp; p.mp = p.mmp;
+  }
+  addPlayer(ws, m, token, heroKey = null, saved = null) {
     const cls = CLASSES[m.cls] ? m.cls : 'vanguard';
     const def = CLASSES[cls];
     let name = String(m.name || '').replace(/[^\w \-']/g, '').trim().slice(0, 16) || 'Wanderer';
     if ([...this.players.values()].some((p) => p.name === name)) name = `${name.slice(0, 13)}#${rint(10, 99)}`;
     const p = {
-      id: this.nextId++, ws, token, goneAt: 0, name, cls, x: 0, y: 0, f: 1,
+      id: this.nextId++, ws, token, heroKey, lastSave: Date.now(), goneAt: 0, name, cls, x: 0, y: 0, f: 1,
       hp: def.hp, mhp: def.hp, mp: def.mp, mmp: def.mp, armor: def.armor,
       lvl: 1, xp: 0, gold: 0, potions: 2, kills: 0, gear: { weapon: null, armor: null, charm: null },
       cds: [0, 0, 0], might: 0, veil: 0, dead: false, respawnAt: 0, lastMove: 0, lastPotion: 0, vote: false,
     };
+    if (saved) this.applyHero(p, saved);
     this.players.set(p.id, p);
     this.placeAtStart(p, true);
     this.send(ws, { t: 'welcome', id: p.id, code: this.code, public: this.isPublic, map: this.mapPayload() });
-    this.log(`${p.name} the ${def.name} enters the vault.`, 'join');
+    this.log(saved ? `${p.name} the level ${p.lvl} ${def.name} returns to the vault.` : `${p.name} the ${def.name} enters the vault.`, 'join');
     if (!this.timer) this.timer = setInterval(() => this.tick(), TICK_MS);
     this.reportToLobby();
     return p;
@@ -304,6 +341,7 @@ export class GameRoom {
     if (have >= need) {
       this.log(`The party descends to depth ${this.depth + 1}...`, 'level');
       this.startLevel(this.depth + 1);
+      for (const o of this.players.values()) this.saveHero(o);
       for (const o of this.players.values()) { o.hp = Math.min(o.mhp, o.hp + Math.round(o.mhp * 0.3)); o.mp = o.mmp; }
       this.broadcast({ t: 'level', map: this.mapPayload() });
       this.reportToLobby();
@@ -398,6 +436,7 @@ export class GameRoom {
       p.lvl++;
       const def = CLASSES[p.cls];
       p.mhp += def.hpPerLvl; p.mmp += def.mpPerLvl;
+      p.lastSave = 0; // persist on next tick
       p.hp = p.mhp; p.mp = p.mmp;
       this.log(`${p.name} reaches level ${p.lvl}!`, 'levelup');
       this.fx({ k: 'levelup', x: p.x, y: p.y, pid: p.id });

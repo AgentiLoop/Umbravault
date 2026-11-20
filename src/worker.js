@@ -2,6 +2,8 @@
 import { MAX_PLAYERS } from '../public/js/data.js';
 export { GameRoom } from './room.js';
 export { Lobby } from './lobby.js';
+export { HeroVault } from './hero.js';
+import { validHeroKey } from './hero.js';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function makeCode() {
@@ -21,6 +23,11 @@ export default {
       return lobbyStub(env).fetch(new Request('https://lobby/queue', req));
     }
     if (p === '/api/rooms') return lobbyStub(env).fetch('https://lobby/rooms');
+    if (p === '/api/heroes') {
+      const key = url.searchParams.get('key');
+      if (!validHeroKey(key)) return json({});
+      return env.HEROES.get(env.HEROES.idFromName(key)).fetch('https://hero/all');
+    }
     if (p === '/api/create') return json({ code: makeCode(), max: MAX_PLAYERS });
     const m = p.match(/^\/ws\/([A-Z0-9]{4,8})$/i);
     if (m) {
