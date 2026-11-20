@@ -39,7 +39,7 @@
         </div>
         <div id="open-rooms" class="open-rooms"></div>
       </div>
-      <div class="foot">1–8 players · WASD / arrows to move · Q/E strafe · Space + 1-3 abilities · H potion · G descend · R revive ally · M mute · Enter chat</div>
+      <div class="foot">1–8 players · WASD / arrows to move · Q/E strafe · Space + 1-3 abilities · H potion · G descend · R revive ally · B merchant · M mute · Enter chat</div>
     </div>
   </section>
 
@@ -78,10 +78,16 @@
     </div>
     <div id="toast" class="toast"></div>
     <div id="dead" class="dead hidden"><h2>You have fallen</h2><p>The Veil releases you in <b id="dead-t">15</b>s…</p><p id="dead-help"></p></div>
+    <div id="shop" class="shop panel hidden">
+      <div class="shop-head"><h2>🏮 Lantern Merchant</h2><span id="shop-gold"></span><button id="shop-close" class="btn">✕</button></div>
+      <p class="shop-say">"Gold for light, wanderer. The deep is hungry."</p>
+      <div id="shop-items"></div>
+    </div>
     <div id="channel" class="channel hidden"><div></div><span></span></div>
     <div id="touch" class="touch">
       <button data-k="turnL">⟲</button><button data-k="fwd">▲</button><button data-k="turnR">⟳</button>
       <button data-k="strafeL">◀</button><button data-k="back">▼</button><button data-k="strafeR">▶</button>
+      <button data-cmd="descend" title="Descend (G)">⬇️</button><button data-cmd="revive" title="Revive (R)">🤝</button><button data-cmd="shop" title="Merchant (B)">🏮</button>
     </div>
   </section>
 

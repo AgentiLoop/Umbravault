@@ -19,6 +19,7 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 | Space, 1, 2 | class abilities |
 | H (or 3) | Crimson Draught (heal 50%) |
 | G | vote to descend (stand on the glowing stairway) |
+| B | trade with the Lantern Merchant (stand near the entry hall) |
 | R | revive a fallen ally next to you (2.5s channel, 1s for Lightwardens) |
 | M | mute / unmute sound |
 | Enter | chat |
@@ -33,6 +34,9 @@ Some monsters spawn as **elites**: about 9% on depth 1, rising to about 22% by d
 💨 Swift (moves and attacks faster), 🩸 Vampiric (heals from its hits), 🪨 Stoneskin (takes 35% less damage), 💢 Frenzied (hits 40% harder) and 🌋 Molten (explodes when slain, so step back).
 Elites give 3× XP and always drop Runed-or-better gear.
 
+### Lantern Merchant
+A spectral merchant hovers over each floor's entry hall. Stand within 2 paces and press **B** (or tap 🏮) to spend gold on:
+Crimson Draughts, a Lantern Elixir (full HP/MP restore), a Runed Cache (random Runed+ gear) or a Mythic Cache (random Mythic+ gear). Prices scale with depth.
 ### Doors & traps
 Iron-bound doors guard many room entrances. Walk into a door to raise it, and it stays open for the whole party. Monsters can't open doors or see through closed ones.
 Hidden spike traps lie in rooms and corridors. Stepping on one costs about 15% of max HP and leaves spikes showing. **Nightblades** sense armed traps within 2 paces and disarm them automatically.

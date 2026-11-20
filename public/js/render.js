@@ -201,6 +201,20 @@ export class Renderer {
     beam.position.set(s.x, WALL_H / 2, s.y);
     this.level.add(ring, hole, beam);
     this.portal = { ring, beam };
+    // the spectral Lantern Merchant hovers over the entry hall
+    if (map.start) {
+      const mer = new THREE.Group();
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture('🧙', '#ffb02e'), transparent: true, opacity: 0.85, depthWrite: false }));
+      spr.scale.set(0.55, 0.55, 1); spr.position.y = 0.62;
+      const lamp = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture('🏮', '#ff8a2a'), transparent: true, depthWrite: false }));
+      lamp.scale.set(0.22, 0.22, 1); lamp.position.set(0.22, 0.5, 0);
+      const label = textSprite('Lantern Merchant (B)', '#ffcf6a', 34, 0.45); label.position.y = 1.0;
+      const ml = new THREE.PointLight(0xffa040, 2.5, 4, 1.4); ml.position.y = 0.6;
+      mer.add(spr, lamp, label, ml);
+      mer.position.set(map.start.x, 0, map.start.y);
+      this.level.add(mer);
+      this.merchant = mer;
+    } else this.merchant = null;
     const pl = new THREE.PointLight(0x55ccff, 2.2, 5, 1.5); pl.position.set(s.x, 0.4, s.y);
     this.level.add(pl);
     // wall torches on walls facing open floor (deterministic-ish spacing)
@@ -490,6 +504,7 @@ export class Renderer {
       u.spr.material.opacity = u.dead ? 0.25 : 1;
       u.spr.position.y = 0.36 + Math.sin(t * 2 + o.id) * 0.02;
     }
+    if (this.merchant) this.merchant.position.y = Math.sin(t * 1.3) * 0.04;
     for (const o of this.itemObjs.values()) { o.rotation.y = t * 1.5; o.position.y = Math.sin(t * 2 + o.id) * 0.02 + 0.02; }
     for (let i = this.fxList.length - 1; i >= 0; i--) {
       const f = this.fxList[i];

@@ -84,6 +84,14 @@ export const AFFIXES = {
   molten: { name: 'Molten', icon: '🌋', color: '#ff5a00', desc: 'explodes when slain' },
 };
 export const eliteName = (m, def) => (m.e ? `${AFFIXES[m.e].name} ${def.name}` : def.name);
+// The Lantern Merchant haunts each floor's entry hall. Prices scale with depth.
+export const SHOP = [
+  { id: 'potion', icon: '🧪', name: 'Crimson Draught', desc: '+1 healing potion (max 9)', price: (d) => 25 + 10 * d },
+  { id: 'elixir', icon: '✨', name: 'Lantern Elixir', desc: 'Fully restore HP and MP', price: (d) => 15 + 8 * d },
+  { id: 'runed', icon: '🔷', name: 'Runed Cache', desc: 'Random gear, Runed or better', price: (d) => 90 + 40 * d },
+  { id: 'mythic', icon: '🔮', name: 'Mythic Cache', desc: 'Random gear, Mythic or better', price: (d) => 260 + 110 * d },
+];
+export const MERCHANT_RANGE = 2;
 export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
 
 export function mulberry32(seed) {

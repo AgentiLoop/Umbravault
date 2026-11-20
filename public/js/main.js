@@ -1,5 +1,5 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
-import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName } from './data.js';
+import { CLASSES, MONSTERS, DIRS, isWalkable, RARITY, SLOTS, gearDesc, AFFIXES, eliteName, SHOP, MERCHANT_RANGE } from './data.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 
@@ -237,11 +237,14 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyH' || e.code === 'Digit3') send({ t: 'potion' });
   else if (e.code === 'KeyG') send({ t: 'descend' });
   else if (e.code === 'KeyR') send({ t: 'revive' });
+  else if (e.code === 'KeyB') toggleShop();
+  else if (e.code === 'Escape') toggleShop(false);
   else if (e.code === 'KeyM') { sfx.toggleMute(); muteLabel(); }
 });
 addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) held.delete(a); });
 addEventListener('blur', () => held.clear());
 document.querySelectorAll('#touch button').forEach((b) => {
+  if (b.dataset.cmd) { b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (b.dataset.cmd === 'shop') toggleShop(); else send({ t: b.dataset.cmd }); }); return; }
   b.addEventListener('pointerdown', (e) => { e.preventDefault(); ACTIONS[b.dataset.k](); held.add(b.dataset.k); nextRepeat = performance.now() + 260; });
   b.addEventListener('pointerup', () => held.delete(b.dataset.k));
   b.addEventListener('pointerleave', () => held.delete(b.dataset.k));
@@ -277,6 +280,23 @@ function buildAbilities() {
   S.abBuilt = S.self.c;
 }
 
+const nearMerchant = () => S.map?.start && Math.max(Math.abs(S.me.x - S.map.start.x), Math.abs(S.me.y - S.map.start.y)) <= MERCHANT_RANGE;
+function toggleShop(force) {
+  const open = force ?? $('#shop').classList.contains('hidden');
+  if (open && !nearMerchant()) { toast('The Lantern Merchant waits at the entry hall.'); return; }
+  $('#shop').classList.toggle('hidden', !open);
+  if (open) drawShop();
+}
+function drawShop() {
+  const d = S.map.depth, gold = S.self?.g ?? 0;
+  $('#shop-items').innerHTML = SHOP.map((it) => {
+    const price = it.price(d);
+    return `<button class="shop-item ${gold < price ? 'poor' : ''}" data-id="${it.id}"><span class="si">${it.icon}</span><span><b>${it.name}</b><br><small>${it.desc}</small></span><span class="sp">💰 ${price}</span></button>`;
+  }).join('');
+  $('#shop-gold').textContent = `💰 ${gold}`;
+  document.querySelectorAll('.shop-item').forEach((b) => b.onclick = () => send({ t: 'buy', item: b.dataset.id }));
+}
+$('#shop-close').onclick = () => toggleShop(false);
 function updateHud(depth) {
   const me = S.self;
   if (!me) return;
@@ -327,6 +347,10 @@ function updateHud(depth) {
   const fallen = !me.d && S.players.find((p) => p.id !== S.id && p.d && !p.o && Math.max(Math.abs(p.x - S.me.x), Math.abs(p.y - S.me.y)) <= 1);
   if (fallen && S.reviveHint !== fallen.id && !me.rv) toast(`Press <b>R</b> to revive ${esc(fallen.n)}`);
   S.reviveHint = fallen ? fallen.id : 0;
+  const near = nearMerchant();
+  if (!$('#shop').classList.contains('hidden')) { if (!near) toggleShop(false); else if (S.shopGold !== me.g) { S.shopGold = me.g; drawShop(); } }
+  if (near && !S.merchantHint) toast('Press <b>B</b> to trade with the Lantern Merchant');
+  S.merchantHint = near;
   // target frame: monster directly ahead (up to 8 cells in line)
   const [dx, dy] = DIRS[S.me.f];
   let tgt = null;

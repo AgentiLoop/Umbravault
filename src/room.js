@@ -1,6 +1,6 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
 import { validHeroKey } from './hero.js';
-import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, rollGear, gearScore, RARITY } from '../public/js/data.js';
+import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
@@ -237,6 +237,7 @@ export class GameRoom {
         break;
       case 'descend': this.voteDescend(p); break;
       case 'revive': this.startRevive(p, now); break;
+      case 'buy': this.buy(p, String(m.item)); break;
       case 'chat': {
         const text = String(m.text || '').slice(0, 140).trim();
         if (text) this.events.push({ e: 'chat', from: p.name, cls: p.cls, text });
@@ -250,6 +251,21 @@ export class GameRoom {
     this.items.push({ id: this.nextId++, x, y, k: 'gear', g });
   }
   // auto-equip upgrades; anything weaker is salvaged into gold
+  buy(p, id) {
+    const item = SHOP.find((s) => s.id === id);
+    if (!item || p.dead) return;
+    if (cheb(p, this.map.start) > MERCHANT_RANGE) { this.send(p.ws, { t: 'toast', text: 'The Lantern Merchant waits at the entry hall.' }); return; }
+    const price = item.price(this.depth);
+    if (p.gold < price) { this.send(p.ws, { t: 'toast', text: `Not enough gold (${price} needed).` }); return; }
+    if (id === 'potion' && p.potions >= 9) { this.send(p.ws, { t: 'toast', text: 'Your satchel is full of draughts.' }); return; }
+    p.gold -= price;
+    if (id === 'potion') p.potions++;
+    else if (id === 'elixir') { p.hp = p.mhp; p.mp = p.mmp; this.fx({ k: 'heal', x: p.x, y: p.y }); }
+    else this.takeGear(p, rollGear(this.depth, Math.random, id === 'mythic' ? 2 : 1));
+    this.log(`${p.name} buys a ${item.name} for ${price} gold.`, 'loot');
+    this.fx({ k: 'pickup', x: p.x, y: p.y });
+    p.lastSave = 0;
+  }
   takeGear(p, g) {
     const cur = p.gear[g.slot];
     const r = RARITY[g.rarity].name;
