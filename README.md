@@ -18,6 +18,7 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 | Space, 1, 2 | class abilities |
 | H (or 3) | Crimson Draught (heal 50%) |
 | G | vote to descend (stand on the glowing stairway) |
+| M | mute / unmute sound |
 | Enter | chat |
 
 ### Callings (classes)

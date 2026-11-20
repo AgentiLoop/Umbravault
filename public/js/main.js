@@ -1,6 +1,7 @@
 // Umbravault client: title screen, matchmaking, networking, input, HUD.
 import { CLASSES, MONSTERS, DIRS, isWalkable } from './data.js';
 import { Renderer } from './render.js';
+import { Sound } from './audio.js';
 
 const $ = (s) => document.querySelector(s);
 const wsBase = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
@@ -14,6 +15,9 @@ const S = {
   lastLocalMove: 0, explored: null, lastHp: null,
 };
 const renderer = new Renderer($('#view'));
+const sfx = new Sound();
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => sfx.unlock(), { capture: true });
+const muteLabel = () => ($('#mute').textContent = sfx.muted ? '🔇' : '🔊');
 
 // ---------- title screen ----------
 $('#name').value = S.name;
@@ -123,9 +127,10 @@ function onMsg(m) {
     case 'level':
       loadMap(m.map);
       S.first = true;
+      sfx.descend();
       toast(`Depth ${m.map.depth}${m.map.depth % 3 === 0 ? '<br><small>The Hollow King awaits…</small>' : ''}`, 3000);
       break;
-    case 'bump': S.me.x = m.x; S.me.y = m.y; renderer.setCamera(m.x, m.y, S.me.f); renderer.shake(0.03); break;
+    case 'bump': S.me.x = m.x; S.me.y = m.y; renderer.setCamera(m.x, m.y, S.me.f); renderer.shake(0.03); sfx.bump(); break;
     case 'toast': toast(m.text); break;
     case 'error': toast(m.msg); break;
     case 's': onState(m); break;
@@ -149,9 +154,12 @@ function onState(m) {
   renderer.syncPlayers(m.p, S.id);
   renderer.syncItems(m.i);
   for (const ev of m.ev) {
-    if (ev.e === 'fx') renderer.playFx(ev, S.id);
-    else if (ev.e === 'log') addLog(ev.text, ev.kind);
-    else if (ev.e === 'chat') addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
+    if (ev.e === 'fx') {
+      renderer.playFx(ev, S.id);
+      const dist = Math.max(Math.abs(ev.x - S.me.x), Math.abs(ev.y - S.me.y));
+      if (dist <= 10) sfx.play({ ...ev, near: dist <= 5 }, S.id);
+    } else if (ev.e === 'log') { addLog(ev.text, ev.kind); if (ev.kind === 'boss' && ev.text.includes('rises')) sfx.bossRoar(); }
+    else if (ev.e === 'chat') sfx.chat(), addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
     if (ev.e === 'fx' && ev.k === 'levelup' && ev.pid === S.id) toast('Level up!');
   }
   updateHud(m.depth);
@@ -165,7 +173,8 @@ function tryMove(rel) {
   const d = (S.me.f + rel) % 4;
   const [dx, dy] = DIRS[d];
   const nx = S.me.x + dx, ny = S.me.y + dy;
-  if (!isWalkable(S.map.cells[ny]?.[nx]) || S.monsters.some((mo) => mo.x === nx && mo.y === ny)) { renderer.shake(0.025); return; }
+  if (!isWalkable(S.map.cells[ny]?.[nx]) || S.monsters.some((mo) => mo.x === nx && mo.y === ny)) { renderer.shake(0.025); sfx.bump(); return; }
+  sfx.step();
   S.me.x = nx; S.me.y = ny; S.lastLocalMove = Date.now();
   renderer.setCamera(nx, ny, S.me.f);
   send({ t: 'move', d, f: S.me.f });
@@ -173,6 +182,7 @@ function tryMove(rel) {
 function turn(dir) {
   S.me.f = (S.me.f + dir + 4) % 4;
   renderer.setCamera(S.me.x, S.me.y, S.me.f);
+  sfx.turn();
   send({ t: 'face', f: S.me.f });
 }
 const ACTIONS = {
@@ -202,6 +212,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'Digit2') send({ t: 'act', i: 2 });
   else if (e.code === 'KeyH' || e.code === 'Digit3') send({ t: 'potion' });
   else if (e.code === 'KeyG') send({ t: 'descend' });
+  else if (e.code === 'KeyM') { sfx.toggleMute(); muteLabel(); }
 });
 addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) held.delete(a); });
 addEventListener('blur', () => held.clear());
@@ -210,6 +221,8 @@ document.querySelectorAll('#touch button').forEach((b) => {
   b.addEventListener('pointerup', () => held.delete(b.dataset.k));
   b.addEventListener('pointerleave', () => held.delete(b.dataset.k));
 });
+$('#mute').onclick = () => { sfx.unlock(); sfx.toggleMute(); muteLabel(); };
+muteLabel();
 $('#room-code').onclick = () => {
   navigator.clipboard?.writeText(`${location.origin}/?room=${S.code}`);
   toast('Invite link copied!');
