@@ -1,6 +1,6 @@
 // GameRoom Durable Object — one authoritative dungeon instance for up to 8 players.
 import { validHeroKey } from './hero.js';
-import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, rollGear, gearScore, RARITY } from '../public/js/data.js';
+import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, isWalkable, AFFIXES, eliteName, SHOP, MERCHANT_RANGE, bossForDepth, rollGear, gearScore, RARITY } from '../public/js/data.js';
 
 const TICK_MS = 100;
 const MOVE_CD = 140;
@@ -34,7 +34,7 @@ export class GameRoom {
     this.monsters = [];
     this.items = [];
     const n = Math.max(1, this.players.size);
-    const hpScale = 1 + 0.18 * (depth - 1) + 0.12 * (n - 1);
+    const hpScale = this.hpScale = 1 + 0.18 * (depth - 1) + 0.12 * (n - 1);
     const maxTier = Math.min(3, Math.floor((depth - 1) / 2) + 1);
     const pool = Object.entries(MONSTERS).filter(([, m]) => !m.boss);
     for (const room of this.map.rooms) {
@@ -53,7 +53,7 @@ export class GameRoom {
     if (depth % 3 === 0) {
       const r = this.map.endRoom;
       const s = this.freeCellIn(r) || { x: r.cx, y: r.cy - 1 };
-      this.spawnMonster('boss', s.x, s.y, 1 + 0.25 * (depth / 3 - 1) + 0.35 * (n - 1));
+      this.spawnMonster(bossForDepth(depth), s.x, s.y, 1 + 0.25 * (depth / 3 - 1) + 0.35 * (n - 1));
     }
     for (const p of this.players.values()) this.placeAtStart(p, false);
     for (const p of this.players.values()) p.vote = false;
@@ -351,7 +351,8 @@ export class GameRoom {
   voteDescend(p) {
     if (p.dead) return;
     if (this.grid[p.y][p.x] !== '>') { this.send(p.ws, { t: 'toast', text: 'Find the glowing stairway to descend.' }); return; }
-    if (this.monsters.some((m) => MONSTERS[m.type].boss)) { this.send(p.ws, { t: 'toast', text: 'The Hollow King\'s ward seals the stairway!' }); return; }
+    const guard = this.monsters.find((m) => MONSTERS[m.type].boss);
+    if (guard) { this.send(p.ws, { t: 'toast', text: `${MONSTERS[guard.type].name}'s ward seals the stairway!` }); return; }
     p.vote = true;
     const need = Math.ceil([...this.players.values()].filter((o) => !o.goneAt).length / 2);
     const have = [...this.players.values()].filter((o) => o.vote).length;
@@ -436,7 +437,7 @@ export class GameRoom {
     killer.kills++;
     this.fx({ k: 'death', x: mo.x, y: mo.y, mid: mo.id });
     this.log(`${killer.name} slays the ${eliteName(mo, def)}!`, def.boss || mo.e ? 'boss' : 'kill');
-    const xp = Math.round(def.xp * (mo.e ? 3 : 1) * (1 + 0.1 * (this.depth - 1)));
+    const xp = Math.round(def.xp * (mo.e ? 3 : 1) * (mo.summon ? 0.4 : 1) * (1 + 0.1 * (this.depth - 1)));
     if (mo.e === 'molten') {
       const now = Date.now();
       this.fx({ k: 'fire', x: mo.x, y: mo.y, tx: mo.x, ty: mo.y });
@@ -454,12 +455,44 @@ export class GameRoom {
     if (def.boss) {
       this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'gold', a: 300 * this.depth });
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]]) if (isWalkable(this.grid[mo.y + dy]?.[mo.x + dx])) this.dropGear(mo.x + dx, mo.y + dy, 2);
-      this.log('The Hollow King crumbles. The stairway ward is broken!', 'boss');
+      this.log(`${def.name} falls. The stairway ward is broken!`, 'boss');
+      for (const m of this.monsters.filter((x) => x.summon)) this.fx({ k: 'death', x: m.x, y: m.y, mid: m.id });
+      this.monsters = this.monsters.filter((x) => !x.summon);
     } else if (r < 0.35) this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'gold', a: rint(4, 12) * this.depth });
     else if (r < 0.5) this.items.push({ id: this.nextId++, x: mo.x, y: mo.y, k: 'potion', a: 1 });
     else if (r < 0.62 + def.tier * 0.04) this.dropGear(mo.x, mo.y, 0);
   }
 
+  // boss signature moves: summon minions or a telegraphed fire nova
+  bossPower(mo, def, now) {
+    if (mo.novaAt && now >= mo.novaAt) {
+      mo.novaAt = 0;
+      this.fx({ k: 'bossnova', x: mo.x, y: mo.y, r: 2 });
+      for (const p of this.players.values()) if (!p.dead && !p.goneAt && cheb(p, mo) <= 2) {
+        const dmg = Math.max(1, 22 + this.depth * 6 - p.armor);
+        p.hp -= dmg; if (p.rev) p.rev = null;
+        this.fx({ k: 'num', x: p.x, y: p.y, v: dmg, pid: p.id });
+        if (p.hp <= 0) this.killPlayer(p, 'a firestorm', now);
+      }
+    }
+    if (now < (mo.nextPower || 0)) return;
+    mo.nextPower = now + def.powerCd;
+    this.log(`${def.name} ${def.title}!`, 'boss');
+    if (def.power === 'nova') { mo.novaAt = now + 1500; this.fx({ k: 'warn', x: mo.x, y: mo.y, r: 2 }); return; }
+    const kind = def.power === 'raise' ? 'skeleton' : 'spider';
+    const alive = this.monsters.filter((m) => m.summon).length;
+    let made = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+      if (made >= (def.power === 'raise' ? 2 : 3) || alive + made >= 6) break;
+      const x = mo.x + dx, y = mo.y + dy;
+      if (!isWalkable(this.grid[y]?.[x]) || this.monsterAt(x, y) || [...this.players.values()].some((p) => p.x === x && p.y === y)) continue;
+      this.spawnMonster(kind, x, y, (this.hpScale || 1) * 0.7);
+      const m = this.monsters[this.monsters.length - 1];
+      m.summon = true; m.e = 0; m.mhp = m.hp = Math.round(MONSTERS[kind].hp * (this.hpScale || 1) * 0.7); m.aggro = true;
+      this.fx({ k: 'summon', x, y });
+      made++;
+    }
+  }
   gainXp(p, xp) {
     p.xp += xp;
     while (p.xp >= XP_PER_LEVEL(p.lvl)) {
@@ -534,9 +567,10 @@ export class GameRoom {
       let nearest = null, nd = 1e9;
       for (const p of targets) { const d = Math.abs(p.x - mo.x) + Math.abs(p.y - mo.y); if (d < nd) { nd = d; nearest = p; } }
       if (!nearest) continue;
-      if (!mo.aggro && nd <= 7 && this.lineClear(mo, nearest)) { mo.aggro = true; if (def.boss) this.log('The Hollow King rises from his throne!', 'boss'); }
+      if (!mo.aggro && nd <= 7 && this.lineClear(mo, nearest)) { mo.aggro = true; if (def.boss) { this.log(`${def.name} awakens!`, 'boss'); mo.nextPower = now + 4000; } }
       if (!mo.aggro) continue;
       if (nd > 18) { mo.aggro = false; continue; }
+      if (def.power) this.bossPower(mo, def, now);
       const adjacent = nd === 1;
       const inRange = def.range && (mo.x === nearest.x || mo.y === nearest.y) && nd <= def.range && this.lineClear(mo, nearest);
       if ((adjacent || inRange) && now >= mo.nextAtk) {

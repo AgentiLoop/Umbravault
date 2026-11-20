@@ -181,7 +181,7 @@ function onState(m) {
       const row = S.map.cells[ev.y];
       S.map.cells[ev.y] = row.slice(0, ev.x) + ev.c + row.slice(ev.x + 1);
       renderer.setCell(ev.x, ev.y, ev.c);
-    } else if (ev.e === 'log') { addLog(ev.text, ev.kind); if (ev.kind === 'boss' && ev.text.includes('rises')) sfx.bossRoar(); }
+    } else if (ev.e === 'log') { addLog(ev.text, ev.kind); if (ev.kind === 'boss' && ev.text.includes('awakens')) sfx.bossRoar(); }
     else if (ev.e === 'chat') sfx.chat(), addLog(`<b style="--c:${CLASSES[ev.cls]?.color}">${esc(ev.from)}:</b> ${esc(ev.text)}`, 'chat', true);
     if (ev.e === 'fx' && ev.k === 'levelup' && ev.pid === S.id) toast('Level up!');
   }
@@ -360,6 +360,10 @@ function updateHud(depth) {
     tgt = S.monsters.find((mo) => mo.x === x && mo.y === y);
     if (tgt) break;
   }
+  // boss bar: shown to the whole party once a boss is awake
+  const boss = S.monsters.find((mo) => MONSTERS[mo.t].boss && mo.a);
+  $('#bossbar').classList.toggle('hidden', !boss);
+  if (boss) { const bd = MONSTERS[boss.t]; $('#bossbar b').textContent = `${bd.icon} ${bd.name}`; $('#bossbar .fill').style.width = `${(100 * boss.hp) / boss.mhp}%`; $('#bossbar span').textContent = `${boss.hp} / ${boss.mhp}`; }
   const tf = $('#target');
   tf.classList.toggle('hidden', !tgt);
   if (tgt) { const d = MONSTERS[tgt.t]; const af = tgt.e ? AFFIXES[tgt.e] : null; tf.innerHTML = `${d.icon} <span style="color:${af ? af.color : 'inherit'}">${eliteName(tgt, d)}</span>${tgt.s ? ' ❄️' : ''}${af ? `<div style="font-size:11px;opacity:.8">${af.icon} Elite — ${af.desc}</div>` : ''}<div class="mini"><div style="width:${(100 * tgt.hp) / tgt.mhp}%"></div></div>`; }

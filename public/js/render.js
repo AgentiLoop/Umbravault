@@ -449,6 +449,9 @@ export class Renderer {
       case 'swing': if (ev.pid === selfId) this.swingFlash(); break;
       case 'trap': this.burst(ev.x, ev.y, 0xaa0000, 0.4, 0.35); this.sparkle(ev.x, ev.y, 0xff3333, 30, 0.7); if (Math.abs(ev.x - this.cam.tx) + Math.abs(ev.y - this.cam.ty) < 0.5) this.shake(0.12); break;
       case 'disarm': this.sparkle(ev.x, ev.y, 0x5fd38d, 24, 0.8); break;
+      case 'warn': this.ringWave(ev.x, ev.y, 0xff3300, ev.r, 1.5); this.sparkle(ev.x, ev.y, 0xff6600, 40, 1.5); break;
+      case 'bossnova': this.ringWave(ev.x, ev.y, 0xff7a1a, ev.r, 0.7); this.burst(ev.x, ev.y, 0xff5500, ev.r + 0.6, 0.7); this.sparkle(ev.x, ev.y, 0xffbb33, 80, 1.1); this.shake(0.1); break;
+      case 'summon': this.burst(ev.x, ev.y, 0x6a2aff, 0.45, 0.5); this.sparkle(ev.x, ev.y, 0xaa77ff, 24, 0.8); break;
       case 'claw': this.burst(ev.tx, ev.ty, 0xff2222, 0.25, 0.25); break;
       case 'dmg': {
         this.floatText(ev.x, ev.y, ev.crit ? `${ev.v}!` : `${ev.v}`, ev.crit ? '#ffd23f' : '#ffffff', ev.crit);

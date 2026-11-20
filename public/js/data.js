@@ -72,7 +72,9 @@ export const MONSTERS = {
   ghoul: { name: 'Crypt Ghoul', icon: '🧟', hp: 70, dmg: [9, 15], xp: 32, speed: 800, atkCd: 1300, undead: true, tier: 2 },
   wraith: { name: 'Pale Wraith', icon: '👻', hp: 60, dmg: [11, 17], xp: 40, speed: 500, atkCd: 1400, undead: true, range: 4, tier: 2 },
   ogre: { name: 'Cavern Ogre', icon: '👹', hp: 130, dmg: [15, 24], xp: 60, speed: 950, atkCd: 1700, tier: 3 },
-  boss: { name: 'The Hollow King', icon: '☠️', hp: 600, dmg: [18, 30], xp: 400, speed: 700, atkCd: 1500, undead: true, range: 3, boss: true, tier: 9 },
+  boss: { name: 'The Hollow King', icon: '☠️', hp: 600, dmg: [18, 30], xp: 400, speed: 700, atkCd: 1500, undead: true, range: 3, boss: true, tier: 9, power: 'raise', powerCd: 9000, title: 'raises the dead' },
+  matriarch: { name: 'The Brood Matriarch', icon: '🦂', hp: 720, dmg: [20, 32], xp: 520, speed: 600, atkCd: 1300, boss: true, tier: 9, power: 'brood', powerCd: 8000, title: 'births a swarm' },
+  tyrant: { name: 'The Ember Tyrant', icon: '🐉', hp: 900, dmg: [22, 34], xp: 700, speed: 800, atkCd: 1600, range: 4, boss: true, tier: 9, power: 'nova', powerCd: 6500, title: 'gathers a firestorm' },
 };
 
 // Elite monsters: tougher variants with one affix, more XP and a guaranteed Runed+ gear drop.
@@ -92,6 +94,10 @@ export const SHOP = [
   { id: 'mythic', icon: '🔮', name: 'Mythic Cache', desc: 'Random gear, Mythic or better', price: (d) => 260 + 110 * d },
 ];
 export const MERCHANT_RANGE = 2;
+// bosses guard every 3rd depth, in this rotation
+export const BOSS_ORDER = ['boss', 'matriarch', 'tyrant'];
+export const bossForDepth = (d) => BOSS_ORDER[(Math.floor(d / 3) - 1) % BOSS_ORDER.length];
+
 export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
 
 export function mulberry32(seed) {

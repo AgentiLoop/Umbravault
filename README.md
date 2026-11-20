@@ -27,7 +27,7 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 ### Callings (classes)
 Vanguard 🛡️ (tank), Arcanist 🔮 (caster), Lightwarden ☀️ (healer), Nightblade 🗡️ (rogue) and Thornwarden 🏹 (archer).
 Each calling has three abilities with their own cooldowns and MP costs, plus its own HP/MP growth per level.
-Every third depth holds a boss, **The Hollow King**.
+Every third depth holds a boss, and the three bosses rotate. **The Hollow King** (depth 3) raises skeletons. **The Brood Matriarch** (depth 6) births spider swarms. **The Ember Tyrant** (depth 9) gathers a firestorm: watch for the red ring and step more than 2 paces away before it erupts. Once a boss wakes, its health bar appears for the whole party. Killing it breaks the stairway ward and destroys its minions.
 
 ### Elite monsters
 Some monsters spawn as **elites**: about 9% on depth 1, rising to about 22% by depth 8. An elite has 2.2× HP and one affix, shown by a colored glow, a ring and a name label:
