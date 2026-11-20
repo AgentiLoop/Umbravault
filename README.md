@@ -8,6 +8,7 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
   or grouped with other waiting wanderers (up to 8). If you're the only one waiting for 6s, you get your own public room and the next players are matched into it.
 - **Create Party**: makes a private room. Share the 🔗 code or invite link (click it in the HUD to copy).
 - **Join**: enter a party code, or click an open public expedition on the title screen.
+- **Reconnect**: if your connection drops or you reload the page, the client reconnects on its own and you resume the same character (level, gold, position). The room keeps a disconnected character for 60s; monsters ignore them while they're offline (📡 in the party list).
 
 ### Controls
 | Key | Action |

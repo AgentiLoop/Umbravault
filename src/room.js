@@ -4,6 +4,7 @@ import { CLASSES, MONSTERS, DIRS, MAX_PLAYERS, XP_PER_LEVEL, generateDungeon, is
 const TICK_MS = 100;
 const MOVE_CD = 140;
 const RESPAWN_MS = 8000;
+const GRACE_MS = 60000; // a disconnected player's character is kept this long for reconnects
 const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
@@ -84,7 +85,6 @@ export class GameRoom {
     const url = new URL(req.url);
     this.code = url.searchParams.get('code');
     if (this.players.size === 0 && url.searchParams.get('public') === '1') this.isPublic = true;
-    if (this.players.size >= MAX_PLAYERS) return new Response('Room full', { status: 409 });
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
@@ -94,32 +94,49 @@ export class GameRoom {
       try { m = JSON.parse(e.data); } catch { return; }
       if (!player) {
         if (m.t === 'join') {
+          const token = String(m.token || '').slice(0, 64);
+          const prev = token && [...this.players.values()].find((p) => p.token === token);
+          if (prev) { player = this.resumePlayer(prev, server); return; }
           if (this.players.size >= MAX_PLAYERS) { this.send(server, { t: 'error', msg: 'Room is full (8/8).' }); server.close(1000); return; }
-          player = this.addPlayer(server, m);
+          player = this.addPlayer(server, m, token);
         }
         return;
       }
       this.handle(player, m);
     });
     const leave = () => {
-      if (!player || !this.players.has(player.id)) return;
-      this.players.delete(player.id);
-      this.log(`${player.name} has left the vault.`);
-      this.reportToLobby();
-      if (this.players.size === 0 && this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (!player || !this.players.has(player.id) || player.ws !== server) return;
+      player.ws = null; player.goneAt = Date.now(); player.vote = false;
+      this.log(`${player.name} lost their lantern-link… (60s to return)`, 'death');
     };
     server.addEventListener('close', leave);
     server.addEventListener('error', leave);
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  addPlayer(ws, m) {
+  resumePlayer(p, ws) {
+    if (p.ws) try { p.ws.close(1000, 'replaced'); } catch {}
+    p.ws = ws; p.goneAt = 0;
+    this.send(ws, { t: 'welcome', id: p.id, code: this.code, public: this.isPublic, map: this.mapPayload(), resumed: true });
+    this.log(`${p.name} returns to the party.`, 'join');
+    return p;
+  }
+  dropExpired(now) {
+    let changed = false;
+    for (const p of [...this.players.values()]) if (p.goneAt && now - p.goneAt > GRACE_MS) {
+      this.players.delete(p.id); changed = true;
+      this.log(`${p.name} has left the vault.`);
+    }
+    if (changed) this.reportToLobby();
+    if (this.players.size === 0 && this.timer) { clearInterval(this.timer); this.timer = null; }
+  }
+  addPlayer(ws, m, token) {
     const cls = CLASSES[m.cls] ? m.cls : 'vanguard';
     const def = CLASSES[cls];
     let name = String(m.name || '').replace(/[^\w \-']/g, '').trim().slice(0, 16) || 'Wanderer';
     if ([...this.players.values()].some((p) => p.name === name)) name = `${name.slice(0, 13)}#${rint(10, 99)}`;
     const p = {
-      id: this.nextId++, ws, name, cls, x: 0, y: 0, f: 1,
+      id: this.nextId++, ws, token, goneAt: 0, name, cls, x: 0, y: 0, f: 1,
       hp: def.hp, mhp: def.hp, mp: def.mp, mmp: def.mp, armor: def.armor,
       lvl: 1, xp: 0, gold: 0, potions: 2, kills: 0,
       cds: [0, 0, 0], might: 0, veil: 0, dead: false, respawnAt: 0, lastMove: 0, lastPotion: 0, vote: false,
@@ -192,7 +209,7 @@ export class GameRoom {
     if (this.grid[p.y][p.x] !== '>') { this.send(p.ws, { t: 'toast', text: 'Find the glowing stairway to descend.' }); return; }
     if (this.monsters.some((m) => MONSTERS[m.type].boss)) { this.send(p.ws, { t: 'toast', text: 'The Hollow King\'s ward seals the stairway!' }); return; }
     p.vote = true;
-    const need = Math.ceil(this.players.size / 2);
+    const need = Math.ceil([...this.players.values()].filter((o) => !o.goneAt).length / 2);
     const have = [...this.players.values()].filter((o) => o.vote).length;
     this.log(`${p.name} is ready to descend (${have}/${need}).`, 'vote');
     if (have >= need) {
@@ -331,6 +348,7 @@ export class GameRoom {
 
   tick() {
     const now = Date.now();
+    this.dropExpired(now);
     const players = [...this.players.values()];
     // regen + respawn
     if (!this.lastRegen || now - this.lastRegen > 1000) {
@@ -342,7 +360,7 @@ export class GameRoom {
       this.log(`${p.name} is drawn back from the Veil.`, 'respawn');
     }
     // monster AI
-    const targets = players.filter((p) => !p.dead && p.veil <= now);
+    const targets = players.filter((p) => !p.dead && !p.goneAt && p.veil <= now);
     const dist = targets.length ? this.distanceField(targets) : null;
     const w = this.map.w;
     for (const mo of this.monsters) {
@@ -392,7 +410,7 @@ export class GameRoom {
       p: [...this.players.values()].map((p) => ({
         id: p.id, n: p.name, c: p.cls, x: p.x, y: p.y, f: p.f, hp: p.hp, mhp: p.mhp, mp: p.mp, mmp: p.mmp,
         l: p.lvl, xp: p.xp, nx: XP_PER_LEVEL(p.lvl), g: p.gold, po: p.potions, k: p.kills, d: p.dead ? Math.max(0, p.respawnAt - now) : 0,
-        mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote,
+        mi: Math.max(0, p.might - now), ve: Math.max(0, p.veil - now), cd: p.cds.map((c) => Math.max(0, c - now)), v: p.vote, o: p.goneAt ? 1 : 0,
       })),
       m: this.monsters.map((m) => ({ id: m.id, t: m.type, x: m.x, y: m.y, f: m.f, hp: m.hp, mhp: m.mhp, s: m.stun > now ? 1 : 0, a: m.aggro ? 1 : 0 })),
       i: this.items.map((i) => ({ id: i.id, x: i.x, y: i.y, k: i.k })),
@@ -404,6 +422,6 @@ export class GameRoom {
 
   broadcast(o) {
     const s = JSON.stringify(o);
-    for (const p of this.players.values()) { try { p.ws.send(s); } catch {} }
+    for (const p of this.players.values()) { try { p.ws?.send(s); } catch {} }
   }
 }

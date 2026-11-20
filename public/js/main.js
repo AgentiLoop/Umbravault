@@ -6,6 +6,9 @@ import { Sound } from './audio.js';
 const $ = (s) => document.querySelector(s);
 const wsBase = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
 const COMPASS = ['N', 'E', 'S', 'W'];
+// per-tab identity so a dropped connection or page reload resumes the same character
+const TOKEN = sessionStorage.getItem('uv.token') || (crypto.randomUUID?.() || String(Math.random()).slice(2) + Date.now());
+sessionStorage.setItem('uv.token', TOKEN);
 
 const S = {
   name: localStorage.getItem('uv.name') || '',
@@ -55,6 +58,8 @@ refreshRooms();
 
 const urlRoom = new URLSearchParams(location.search).get('room');
 if (urlRoom) $('#code').value = urlRoom.toUpperCase();
+// reload while in a room → rejoin it with the same character
+if (urlRoom && sessionStorage.getItem('uv.room') === urlRoom.toUpperCase() && S.name) connectRoom(urlRoom.toUpperCase(), sessionStorage.getItem('uv.pub') === '1');
 
 $('#btn-quick').onclick = () => { readName(); quickMatch(); };
 $('#btn-create').onclick = async () => {
@@ -65,6 +70,7 @@ $('#btn-create').onclick = async () => {
 $('#btn-join').onclick = () => { readName(); const c = $('#code').value.trim().toUpperCase(); if (c.length >= 4) connectRoom(c, false); };
 $('#code').onkeydown = (e) => { if (e.key === 'Enter') $('#btn-join').click(); };
 $('#btn-cancel').onclick = () => { S.qws?.close(); showScreen('title'); };
+function leaveRoom() { const ws = S.ws; S.ws = null; sessionStorage.removeItem('uv.room'); ws?.close(); S.map = null; S.demo = false; showScreen('title'); history.replaceState(null, '', '/'); }
 
 function showScreen(which) {
   $('#title').classList.toggle('hidden', which !== 'title');
@@ -93,16 +99,22 @@ function quickMatch() {
 }
 
 // ---------- room connection ----------
-function connectRoom(code, isPublic) {
-  S.ws?.close();
+function connectRoom(code, isPublic, attempt = 0) {
+  if (attempt === 0) { const old = S.ws; S.ws = null; old?.close(); }
   const ws = new WebSocket(`${wsBase}/ws/${code}${isPublic ? '?public=1' : ''}`);
   S.ws = ws; S.code = code;
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: S.name, cls: S.cls }));
-  ws.onmessage = (e) => onMsg(JSON.parse(e.data));
-  ws.onclose = () => {
+  sessionStorage.setItem('uv.room', code); sessionStorage.setItem('uv.pub', isPublic ? '1' : '0');
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: S.name, cls: S.cls, token: TOKEN }));
+  ws.onmessage = (e) => { if (S.ws === ws) onMsg(JSON.parse(e.data), ws); };
+  ws.onclose = (e) => {
     if (S.ws !== ws) return;
-    toast('Connection to the vault lost.');
-    setTimeout(() => { if (S.ws === ws) { S.ws = null; showScreen('title'); } }, 1500);
+    if (e.code === 1000 && e.reason === 'replaced') { S.ws = null; toast('Opened in another tab.'); return; }
+    // auto-reconnect with backoff; the server keeps our character for 60s
+    if (ws.ok) attempt = 0;
+    if (attempt < 12 && !ws.fatal) {
+      toast(`Lantern-link lost — reconnecting… (${attempt + 1})`, 2500);
+      setTimeout(() => { if (S.ws === ws) connectRoom(code, isPublic, attempt + 1); }, Math.min(5000, 500 * 2 ** attempt));
+    } else { toast('Connection to the vault lost.'); setTimeout(() => { if (S.ws === ws) leaveRoom(); }, 1500); }
   };
 }
 const send = (o) => { if (S.ws?.readyState === 1) S.ws.send(JSON.stringify(o)); };
@@ -113,16 +125,17 @@ function loadMap(map) {
   renderer.buildLevel(map);
 }
 
-function onMsg(m) {
+function onMsg(m, ws) {
   switch (m.t) {
     case 'welcome':
+      if (ws) ws.ok = true;
       S.id = m.id; S.code = m.code;
       loadMap(m.map);
       history.replaceState(null, '', `?room=${m.code}`);
       $('#room-code').textContent = `🔗 ${m.code}${m.public ? ' · public' : ' · private'}`;
       showScreen('game');
       S.first = true;
-      toast(`Depth ${m.map.depth}`);
+      toast(m.resumed ? 'Reconnected — welcome back!' : `Depth ${m.map.depth}`);
       break;
     case 'level':
       loadMap(m.map);
@@ -132,7 +145,7 @@ function onMsg(m) {
       break;
     case 'bump': S.me.x = m.x; S.me.y = m.y; renderer.setCamera(m.x, m.y, S.me.f); renderer.shake(0.03); sfx.bump(); break;
     case 'toast': toast(m.text); break;
-    case 'error': toast(m.msg); break;
+    case 'error': if (ws) ws.fatal = true; toast(m.msg); break;
     case 's': onState(m); break;
   }
 }
@@ -271,8 +284,8 @@ function updateHud(depth) {
   $('#stats').innerHTML = `<b style="color:${c.color}">${c.icon} Lv ${me.l}</b><br>💰 ${me.g}<br>☠️ ${me.k} kills`;
   $('#party').innerHTML = S.players.map((p) => {
     const pc = CLASSES[p.c];
-    const buffs = (p.mi ? '📯' : '') + (p.ve ? '🌑' : '') + (p.v ? '⬇️' : '');
-    return `<div class="pf ${p.id === S.id ? 'self' : ''} ${p.d ? 'dead' : ''}" style="--c:${pc.color}">
+    const buffs = (p.o ? '📡' : '') + (p.mi ? '📯' : '') + (p.ve ? '🌑' : '') + (p.v ? '⬇️' : '');
+    return `<div class="pf ${p.id === S.id ? 'self' : ''} ${p.d || p.o ? 'dead' : ''}" style="--c:${pc.color}">
       <div class="row"><span class="nm">${pc.icon} ${esc(p.n)}</span><span>Lv ${p.l} <span class="buffs">${buffs}</span></span></div>
       <div class="mini"><div style="width:${(100 * p.hp) / p.mhp}%;background:linear-gradient(90deg,#a11,#e44)"></div></div>
       <div class="mini"><div style="width:${(100 * p.mp) / p.mmp}%;background:linear-gradient(90deg,#227,#58f)"></div></div>

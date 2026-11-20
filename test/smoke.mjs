@@ -31,7 +31,7 @@ check(ma && mb && ma.code === mb.code, `quick-match pairs both players into room
 
 const code = ma.code;
 const pa = await open(`${WS}/ws/${code}?public=1`);
-pa.send(JSON.stringify({ t: 'join', name: 'Alpha', cls: 'arcanist' }));
+pa.send(JSON.stringify({ t: 'join', name: 'Alpha', cls: 'arcanist', token: 'tok-alpha' }));
 const pb = await open(`${WS}/ws/${code}?public=1`);
 pb.send(JSON.stringify({ t: 'join', name: 'Bravo', cls: 'vanguard' }));
 const wa = await waitFor(pa, (m) => m.t === 'welcome');
@@ -76,6 +76,19 @@ check(wc && wc.code === priv && wc.public === false, `private party room ${priv}
 const rooms2 = await (await fetch(`${BASE}/api/rooms`)).json();
 check(!rooms2.rooms.some((r) => r.code === priv), 'private room is not listed publicly');
 
-for (const w of [a, b, c, pa, pb, pc]) w.close();
+// reconnect: Alpha drops, is shown offline, then resumes the same character with the same token
+const before = (await waitFor(pb, (m) => m.t === 's')).p.find((p) => p.n === 'Alpha');
+pa.close();
+pb.msgs = [];
+const off = await waitFor(pb, (m) => m.t === 's' && m.p.some((p) => p.n === 'Alpha' && p.o === 1));
+check(!!off, 'disconnected player kept in party and flagged offline');
+const pa2 = await open(`${WS}/ws/${code}?public=1`);
+pa2.send(JSON.stringify({ t: 'join', name: 'Alpha', cls: 'arcanist', token: 'tok-alpha' }));
+const wr = await waitFor(pa2, (m) => m.t === 'welcome');
+check(wr && wr.resumed && wr.id === before.id, `reconnect resumes same character (id ${wr?.id})`);
+pb.msgs = [];
+const back = await waitFor(pb, (m) => m.t === 's' && m.p.filter((p) => p.n.startsWith('Alpha')).length === 1 && m.p.find((p) => p.n === 'Alpha')?.o === 0);
+check(!!back, 'resumed player online again with no duplicate');
+for (const w of [a, b, c, pa2, pb, pc]) w.close();
 console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

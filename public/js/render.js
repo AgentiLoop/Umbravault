@@ -281,7 +281,7 @@ export class Renderer {
         this.entities.add(o); this.playerObjs.set(p.id, o);
       }
       const u = o.userData;
-      u.x = p.x; u.y = p.y; u.dead = p.d > 0;
+      u.x = p.x; u.y = p.y; u.dead = p.d > 0 || p.o === 1;
       if (u.lastHp !== p.hp) { u.lastHp = p.hp; u.bar.userData.set(p.hp / p.mhp, '#3c3'); }
     }
     for (const [id, o] of this.playerObjs) if (!seen.has(id)) { this.entities.remove(o); this.playerObjs.delete(id); }
