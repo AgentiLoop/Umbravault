@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Umbravault — Crypts of the Lantern-Bound</title>
+  <meta name="description" content="A 1-8 player online dungeon crawler. Form a party or quick-match with wanderers, then descend into the Umbravault." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="vignette"></div>
+  <div id="hurt"></div>
+
+  <!-- Title / party screen -->
+  <section id="title" class="screen">
+    <div class="title-wrap">
+      <h1 class="logo">Umbravault</h1>
+      <div class="tagline">Crypts of the Lantern-Bound</div>
+      <div class="panel setup">
+        <label class="field">Wanderer name
+          <input id="name" maxlength="16" placeholder="Enter your name" autocomplete="off" />
+        </label>
+        <div class="label">Choose your calling</div>
+        <div id="classes" class="classes"></div>
+        <div id="class-detail" class="class-detail"></div>
+        <div class="buttons">
+          <button id="btn-quick" class="btn primary">⚔️ Quick Match</button>
+          <button id="btn-create" class="btn">🏰 Create Party</button>
+          <div class="join-row">
+            <input id="code" maxlength="8" placeholder="PARTY CODE" autocomplete="off" />
+            <button id="btn-join" class="btn">Join</button>
+          </div>
+        </div>
+        <div id="open-rooms" class="open-rooms"></div>
+      </div>
+      <div class="foot">1–8 players · WASD / arrows to move · Q/E strafe · Space + 1-3 abilities · H potion · G descend · Enter chat</div>
+    </div>
+  </section>
+
+  <!-- Matchmaking -->
+  <section id="matching" class="screen hidden">
+    <div class="panel center">
+      <div class="spinner"></div>
+      <h2>Seeking fellow wanderers…</h2>
+      <p id="match-status">Joining the queue</p>
+      <div id="match-names" class="match-names"></div>
+      <button id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </section>
+
+  <!-- HUD -->
+  <section id="hud" class="hidden">
+    <div id="party" class="party"></div>
+    <div id="topbar" class="topbar">
+      <span id="depth">Depth 1</span>
+      <span id="compass">N</span>
+      <span id="room-code" title="Click to copy invite link"></span>
+    </div>
+    <canvas id="minimap" width="198" height="198"></canvas>
+    <div id="target" class="target hidden"></div>
+    <div id="log" class="log"></div>
+    <input id="chat" class="chat hidden" maxlength="140" placeholder="Say something… (Enter to send, Esc to cancel)" />
+    <div id="me" class="me">
+      <div class="bars">
+        <div class="bar hp"><div></div><span></span></div>
+        <div class="bar mp"><div></div><span></span></div>
+        <div class="bar xp"><div></div><span></span></div>
+      </div>
+      <div id="abilities" class="abilities"></div>
+      <div id="stats" class="stats"></div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="dead" class="dead hidden"><h2>You have fallen</h2><p>The Veil releases you in <b id="dead-t">8</b>s…</p></div>
+    <div id="touch" class="touch">
+      <button data-k="turnL">⟲</button><button data-k="fwd">▲</button><button data-k="turnR">⟳</button>
+      <button data-k="strafeL">◀</button><button data-k="back">▼</button><button data-k="strafeR">▶</button>
+    </div>
+  </section>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

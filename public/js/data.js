@@ -1,0 +1,129 @@
+// Shared game data — imported by both the browser client and the Cloudflare Worker.
+export const GAME_NAME = 'Umbravault';
+export const GAME_TAGLINE = 'Crypts of the Lantern-Bound';
+export const MAX_PLAYERS = 8;
+export const MAP_W = 33;
+export const MAP_H = 33;
+
+// Directions: 0=N(-y) 1=E(+x) 2=S(+y) 3=W(-x)
+export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+// kind: melee (cell in front), ranged (first monster in line), aoe (all monsters within radius),
+// cone (front 3 cells + 2 deep), heal (party within radius), buff (self/party effect)
+export const CLASSES = {
+  vanguard: {
+    name: 'Vanguard', icon: '🛡️', color: '#d9a441',
+    desc: 'Iron-shod frontliner. Soaks blows and shatters skulls.',
+    hp: 150, mp: 40, armor: 4, hpPerLvl: 18, mpPerLvl: 4,
+    abilities: [
+      { id: 'cleave', name: 'Cleave', icon: '⚔️', kind: 'cone', dmg: [12, 18], cd: 700, mp: 0, desc: 'Sweep the three cells before you.' },
+      { id: 'bash', name: 'Shield Bash', icon: '🛡️', kind: 'melee', dmg: [16, 24], cd: 5000, mp: 10, stun: 2500, desc: 'Stun the foe ahead.' },
+      { id: 'warcry', name: 'Warcry', icon: '📯', kind: 'buff', buff: 'might', dur: 10000, radius: 5, cd: 18000, mp: 20, desc: 'Allies nearby deal +40% damage.' },
+    ],
+  },
+  arcanist: {
+    name: 'Arcanist', icon: '🔮', color: '#7d6bff',
+    desc: 'Scholar of the starless sky. Fragile, devastating.',
+    hp: 75, mp: 140, armor: 0, hpPerLvl: 8, mpPerLvl: 14,
+    abilities: [
+      { id: 'bolt', name: 'Arcane Bolt', icon: '✨', kind: 'ranged', dmg: [10, 16], range: 8, cd: 650, mp: 0, fx: 'bolt', desc: 'A lance of violet force.' },
+      { id: 'fireball', name: 'Fireball', icon: '🔥', kind: 'ranged', dmg: [22, 34], range: 8, splash: 1, cd: 4500, mp: 25, fx: 'fire', desc: 'Explodes on impact, burning everything nearby.' },
+      { id: 'nova', name: 'Frost Nova', icon: '❄️', kind: 'aoe', dmg: [12, 18], radius: 2, stun: 3000, cd: 12000, mp: 30, fx: 'frost', desc: 'Freeze all foes around you.' },
+    ],
+  },
+  lightwarden: {
+    name: 'Lightwarden', icon: '☀️', color: '#ffe27a',
+    desc: 'Bearer of the last sunrise. Mends wounds, smites the dead.',
+    hp: 110, mp: 120, armor: 2, hpPerLvl: 12, mpPerLvl: 10,
+    abilities: [
+      { id: 'smite', name: 'Smite', icon: '🔨', kind: 'melee', dmg: [11, 17], cd: 750, mp: 0, holy: 2, desc: 'Holy hammer — double damage to undead.' },
+      { id: 'mend', name: 'Mending Light', icon: '💛', kind: 'heal', heal: [30, 45], radius: 5, cd: 6000, mp: 25, desc: 'Heal every ally within 5 paces.' },
+      { id: 'radiance', name: 'Radiance', icon: '🌟', kind: 'aoe', dmg: [16, 24], radius: 3, holy: 2, cd: 10000, mp: 30, fx: 'holy', desc: 'Searing light bursts from you.' },
+    ],
+  },
+  nightblade: {
+    name: 'Nightblade', icon: '🗡️', color: '#5fd38d',
+    desc: 'A whisper with a knife. Strikes from the shadows.',
+    hp: 95, mp: 70, armor: 1, hpPerLvl: 10, mpPerLvl: 6,
+    abilities: [
+      { id: 'stab', name: 'Twin Daggers', icon: '🗡️', kind: 'melee', dmg: [9, 13], cd: 420, mp: 0, desc: 'Lightning-fast stabs.' },
+      { id: 'backstab', name: 'Eviscerate', icon: '💀', kind: 'melee', dmg: [30, 45], cd: 6000, mp: 20, crit: 0.5, desc: 'Brutal strike. 50% chance to crit; always crits from Shadowveil.' },
+      { id: 'vanish', name: 'Shadowveil', icon: '🌑', kind: 'buff', buff: 'veil', dur: 6000, radius: 0, cd: 16000, mp: 20, desc: 'Monsters lose track of you.' },
+    ],
+  },
+  thornwarden: {
+    name: 'Thornwarden', icon: '🏹', color: '#9be15d',
+    desc: 'Wild-sworn archer. Pins foes from afar.',
+    hp: 100, mp: 80, armor: 1, hpPerLvl: 11, mpPerLvl: 7,
+    abilities: [
+      { id: 'arrow', name: 'Longshot', icon: '🏹', kind: 'ranged', dmg: [11, 16], range: 10, cd: 700, mp: 0, fx: 'arrow', desc: 'A true-flighted arrow.' },
+      { id: 'volley', name: 'Piercing Volley', icon: '🎯', kind: 'ranged', dmg: [18, 26], range: 10, pierce: true, cd: 5000, mp: 20, fx: 'arrow', desc: 'Hits every foe in the line.' },
+      { id: 'snare', name: 'Thornsnare', icon: '🌿', kind: 'aoe', dmg: [6, 10], radius: 3, stun: 4000, cd: 14000, mp: 25, fx: 'thorn', desc: 'Roots all nearby foes.' },
+    ],
+  },
+};
+
+export const MONSTERS = {
+  rat: { name: 'Gloom Rat', icon: '🐀', hp: 22, dmg: [3, 6], xp: 8, speed: 450, atkCd: 900, tier: 0 },
+  goblin: { name: 'Mire Goblin', icon: '👺', hp: 34, dmg: [5, 9], xp: 14, speed: 550, atkCd: 1100, tier: 0 },
+  skeleton: { name: 'Bone Rattler', icon: '💀', hp: 45, dmg: [6, 11], xp: 20, speed: 700, atkCd: 1200, undead: true, tier: 1 },
+  spider: { name: 'Vault Spider', icon: '🕷️', hp: 38, dmg: [7, 12], xp: 22, speed: 400, atkCd: 1000, tier: 1 },
+  cultist: { name: 'Ember Cultist', icon: '🧙', hp: 40, dmg: [8, 13], xp: 26, speed: 750, atkCd: 1800, range: 5, tier: 1 },
+  ghoul: { name: 'Crypt Ghoul', icon: '🧟', hp: 70, dmg: [9, 15], xp: 32, speed: 800, atkCd: 1300, undead: true, tier: 2 },
+  wraith: { name: 'Pale Wraith', icon: '👻', hp: 60, dmg: [11, 17], xp: 40, speed: 500, atkCd: 1400, undead: true, range: 4, tier: 2 },
+  ogre: { name: 'Cavern Ogre', icon: '👹', hp: 130, dmg: [15, 24], xp: 60, speed: 950, atkCd: 1700, tier: 3 },
+  boss: { name: 'The Hollow King', icon: '☠️', hp: 600, dmg: [18, 30], xp: 400, speed: 700, atkCd: 1500, undead: true, range: 3, boss: true, tier: 9 },
+};
+
+export const XP_PER_LEVEL = (lvl) => 60 + lvl * 50;
+
+export function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Procedural dungeon: rooms + corridors on an odd grid. Returns {w,h,cells:string[], rooms, start, stairs}
+export function generateDungeon(seed, depth) {
+  const rnd = mulberry32(seed * 7919 + depth * 104729);
+  const w = MAP_W, h = MAP_H;
+  const g = Array.from({ length: h }, () => Array(w).fill('#'));
+  const rooms = [];
+  const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+  for (let tries = 0; tries < 200 && rooms.length < 10 + Math.min(depth, 4); tries++) {
+    const rw = ri(2, 4) * 2 + 1, rh = ri(2, 4) * 2 + 1;
+    const x = ri(0, (w - rw - 1) / 2) * 2 + 1, y = ri(0, (h - rh - 1) / 2) * 2 + 1;
+    if (x + rw >= w || y + rh >= h) continue;
+    if (rooms.some((r) => x <= r.x + r.w + 1 && x + rw + 1 >= r.x && y <= r.y + r.h + 1 && y + rh + 1 >= r.y)) continue;
+    rooms.push({ x, y, w: rw, h: rh, cx: x + (rw >> 1), cy: y + (rh >> 1) });
+    for (let yy = y; yy < y + rh; yy++) for (let xx = x; xx < x + rw; xx++) g[yy][xx] = '.';
+  }
+  // connect rooms in order of x, plus a few extra loops
+  const sorted = [...rooms].sort((a, b) => a.cx - b.cx);
+  const carve = (a, b) => {
+    let x = a.cx, y = a.cy;
+    const horizFirst = rnd() < 0.5;
+    const stepX = () => { while (x !== b.cx) { x += Math.sign(b.cx - x); g[y][x] = '.'; } };
+    const stepY = () => { while (y !== b.cy) { y += Math.sign(b.cy - y); g[y][x] = '.'; } };
+    if (horizFirst) { stepX(); stepY(); } else { stepY(); stepX(); }
+  };
+  for (let i = 1; i < sorted.length; i++) carve(sorted[i - 1], sorted[i]);
+  for (let i = 0; i < 3 && rooms.length > 3; i++) carve(rooms[ri(0, rooms.length - 1)], rooms[ri(0, rooms.length - 1)]);
+  const start = sorted[0];
+  const end = sorted[sorted.length - 1];
+  g[end.cy][end.cx] = '>';
+  // decorative pillars in big rooms
+  for (const r of rooms) {
+    if (r !== start && r !== end && r.w >= 7 && r.h >= 7 && rnd() < 0.6) {
+      for (const [px, py] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) g[py][px] = 'P';
+    }
+  }
+  return { w, h, depth, cells: g.map((row) => row.join('')), rooms, start: { x: start.cx, y: start.cy }, stairs: { x: end.cx, y: end.cy }, startRoom: start, endRoom: end };
+}
+
+export const isWalkable = (ch) => ch === '.' || ch === '>';

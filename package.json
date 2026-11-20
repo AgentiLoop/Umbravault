@@ -1,0 +1,20 @@
+{
+  "name": "umbravault",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Umbravault: Crypts of the Lantern-Bound — a 1-8 player online grid dungeon crawler on Cloudflare Workers + Durable Objects with a Three.js client.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261119.1": true,
+    "sharp@0.35.5": true
+  }
+}
