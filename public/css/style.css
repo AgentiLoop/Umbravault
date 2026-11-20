@@ -113,3 +113,24 @@ h2 { font-family: Cinzel, serif; color: var(--gold); margin: 6px 0; }
 .emotes button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); font-size: 17px; cursor: pointer; padding: 0; }
 .emotes button:hover { border-color: var(--gold); }
 @media (pointer: coarse) { .emotes { bottom: auto; top: 50%; flex-direction: column; } }
+
+/* touch devices: big ability buttons, compact HUD that never overlaps the movement pad */
+#view, #hud, #hud button, .ab { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+@media (pointer: coarse) {
+  .me { left: 8px; bottom: 8px; padding: 8px; gap: 8px; flex-wrap: wrap; max-width: calc(100vw - 210px); }
+  .bars { width: 100%; }
+  .stats, .gear-sep, .ab.gear { display: none; }
+  .ab { width: 62px; height: 62px; font-size: 30px; }
+  .touch { right: 8px; bottom: 8px; grid-template-columns: repeat(3, 58px); }
+  .touch button { height: 58px; }
+  .log { bottom: auto; top: 50%; left: 60px; max-height: 120px; font-size: 12px; width: min(360px, 50vw); }
+  .chat { bottom: auto; top: 14px; left: 50%; transform: translateX(-50%); }
+  .party { width: 150px; } .pf { padding: 4px 6px; font-size: 11px; }
+  #minimap { width: 120px; height: 120px; }
+  .target { top: 50px; min-width: 160px; font-size: 13px; }
+  .bossbar { top: 96px; }
+}
+@media (pointer: coarse) and (max-width: 560px) {
+  .me { max-width: calc(100vw - 16px); bottom: 210px; }
+  .party { display: none; }
+}

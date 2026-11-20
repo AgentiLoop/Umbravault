@@ -249,6 +249,19 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) held.delete(a); });
 addEventListener('blur', () => held.clear());
+// swipe gestures on the 3D view: left/right turn, up/down step, tap = primary ability
+let swipe = null;
+$('#view').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse' && S.map) swipe = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+$('#view').addEventListener('pointerup', (e) => {
+  if (!swipe || $('#hud').classList.contains('hidden')) { swipe = null; return; }
+  const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y, dist = Math.hypot(dx, dy);
+  if (dist < 18 && performance.now() - swipe.t < 300) send({ t: 'act', i: 0 });
+  else if (dist >= 40) {
+    if (Math.abs(dx) > Math.abs(dy)) ACTIONS[dx < 0 ? 'turnL' : 'turnR']();
+    else ACTIONS[dy < 0 ? 'fwd' : 'back']();
+  }
+  swipe = null;
+});
 document.querySelectorAll('#touch button').forEach((b) => {
   if (b.dataset.cmd) { b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (b.dataset.cmd === 'shop') toggleShop(); else send({ t: b.dataset.cmd }); }); return; }
   b.addEventListener('pointerdown', (e) => { e.preventDefault(); ACTIONS[b.dataset.k](); held.add(b.dataset.k); nextRepeat = performance.now() + 260; });
@@ -282,7 +295,7 @@ function buildAbilities() {
   $('#abilities').innerHTML = c.abilities.map((a, i) => `<div class="ab" data-i="${i}" title="${a.name} — ${a.desc}"><span class="key">${i === 0 ? '␣' : i}</span>${a.icon}<span class="mp">${a.mp || ''}</span><div class="cd"></div></div>`).join('') +
     `<div class="gear-sep"></div>` + Object.values(SLOTS).map((sl, i) => `<div class="ab gear" data-g="${i}"><span class="key">${sl.label}</span><span class="gi">${sl.icon}</span></div>`).join('') +
     `<div class="ab" data-potion="1" title="Crimson Draught — restore 50% HP"><span class="key">H</span>🧪<span class="mp" id="po"></span></div>`;
-  document.querySelectorAll('#abilities .ab:not(.gear)').forEach((el) => el.onclick = () => el.dataset.potion ? send({ t: 'potion' }) : send({ t: 'act', i: +el.dataset.i }));
+  document.querySelectorAll('#abilities .ab:not(.gear)').forEach((el) => el.onpointerdown = (e) => { e.preventDefault(); el.dataset.potion ? send({ t: 'potion' }) : send({ t: 'act', i: +el.dataset.i }); });
   S.abBuilt = S.self.c;
 }
 
