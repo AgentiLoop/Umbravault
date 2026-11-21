@@ -5,6 +5,8 @@ step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**,
 
 ### ▶ Play now: **https://umbravault.xcf.ai**
 
+Link previews on Facebook, X/Twitter, LinkedIn and Discord use the 1200×630 share card in `public/img/og.jpg`. Open Graph and Twitter Card tags are in `public/index.html`.
+
 No install and no account. It runs in any modern browser on desktop, tablet or phone.
 
 ![Exploring the Sunken Crypt](docs/screenshots/dungeon.jpg)
