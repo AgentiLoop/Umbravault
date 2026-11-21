@@ -1,6 +1,8 @@
 name = "umbravault"
 main = "src/worker.js"
 compatibility_date = "2024-11-01"
+workers_dev = true
+routes = [{ pattern = "umbravault.xcf.ai", custom_domain = true }]
 [assets]
 directory = "./public"
 binding = "ASSETS"

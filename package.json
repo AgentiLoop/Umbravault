@@ -1,6 +1,6 @@
 {
   "name": "umbravault",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Umbravault: Crypts of the Lantern-Bound \u2014 a 1-8 player online grid dungeon crawler on Cloudflare Workers + Durable Objects with a Three.js client.",
@@ -21,5 +21,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/AgentiLoop/Umbravault.git"
-  }
+  },
+  "homepage": "https://umbravault.xcf.ai"
 }

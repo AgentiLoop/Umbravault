@@ -3,9 +3,30 @@
 A 1–8 player online, first-person, grid-based dungeon crawler in the spirit of the classic
 step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**, and the browser client uses **Three.js**.
 
-**Play now:** https://umbravault.todd-de8.workers.dev
+### ▶ Play now: **https://umbravault.xcf.ai**
 
-## Play
+No install and no account. It runs in any modern browser on desktop, tablet or phone.
+
+![Exploring the Sunken Crypt](docs/screenshots/dungeon.jpg)
+
+| Title & party setup | Combat |
+|---|---|
+| ![Title screen](docs/screenshots/title.jpg) | ![Casting at a Gloom Rat](docs/screenshots/combat.jpg) |
+
+## How to play
+1. **Open** https://umbravault.xcf.ai, type a name and pick a calling (class). Each card shows HP/MP, and ⭐ marks a hero you've saved before.
+2. **Start a game:**
+   - **⚔️ Quick Match** puts you with other players who are online now.
+   - **🏰 Create Party** makes a private game. Click the 🔗 code in the top bar to copy an invite link for friends (up to 8 players).
+   - **Join** takes a friend's party code.
+3. **Explore** with W/A/S/D (step and turn 90°, Bard's Tale style) or the arrow keys. Q/E strafe. Walk into doors to open them.
+4. **Fight:** face a foe and press **Space** for your main attack, or **1 / 2** for your special abilities. Watch the ability cooldowns and your MP.
+5. **Survive:** press **H** to drink a potion. If a friend falls, stand next to them and press **R** to revive them. The 🏮 Lantern Merchant at the floor's entrance (press **B**) sells potions, elixirs and gear caches for gold.
+6. **Loot:** walk over glowing gear and it equips automatically if it's better.
+7. **Descend:** stand on the glowing blue stairway and press **G**. Half the party must vote. Every 3rd floor a boss seals the stairs until it's slain.
+8. Your hero (level, gold, gear) is **saved automatically**, so you can come back any time.
+
+## Joining a game
 - **Quick Match**: joins the matchmaking queue. You're dropped into an open public expedition that has room,
   or grouped with other waiting wanderers (up to 8). If you're the only one waiting for 6s, you get your own public room and the next players are matched into it.
 - **Create Party**: makes a private room. Share the 🔗 code or invite link (click it in the HUD to copy).
@@ -78,7 +99,7 @@ Deeper floors roll stronger gear, and the Hollow King always drops Mythic-or-bet
 npm install
 npx wrangler dev --port 8799      # local
 npm test                          # smoke test against the local dev server
-BASE=https://umbravault.todd-de8.workers.dev npm test   # smoke test against production
+BASE=https://umbravault.xcf.ai npm test   # smoke test against production
 npx wrangler deploy               # deploy to Cloudflare
 ```
 
