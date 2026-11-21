@@ -81,3 +81,9 @@ npm test                          # smoke test against the local dev server
 BASE=https://umbravault.todd-de8.workers.dev npm test   # smoke test against production
 npx wrangler deploy               # deploy to Cloudflare
 ```
+
+## Contributing
+Issues and pull requests are welcome. Run `npm test` against `wrangler dev` before you submit.
+
+## License
+[MIT](LICENSE)
