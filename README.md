@@ -1,5 +1,7 @@
 # Umbravault — Crypts of the Lantern-Bound
 
+🤖 **Made with [AgentiLoop Agent!](https://github.com/AgentiLoop/Agent)**, the autonomous AI agent for your Mac · 🌐 [agentiloop.ai](https://agentiloop.ai) · ▶️ **Play:** [umbravault.xcf.ai](https://umbravault.xcf.ai)
+
 A 1–8 player online, first-person, grid-based dungeon crawler in the spirit of the classic
 step-and-turn crawlers. It's built for **Cloudflare Workers + Durable Objects**, and the browser client uses **Three.js**.
 
